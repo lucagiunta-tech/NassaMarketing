@@ -1,0 +1,35 @@
+
+> check
+> node check_step38.cjs
+
+syntax/import diagnostics 0
+ok 1 - editorialModel normalizes channel colors for lowercase and legacy uppercase
+ok 2 - editorialModel normalizes legacy statuses
+ok 3 - editorialModel merges feedItems and legacy contentItems without duplicates
+ok 4 - editorialModel migrates workspace data to schemaVersion 2 and feedItems
+ok 5 - editorialModel applyEdUpdate preserves normalized editorial shape
+ok 6 - postValidation accepts a valid post
+ok 7 - postValidation blocks invalid date, time, URL and missing platform
+ok 8 - postValidation warns for reel without video and CTA without link
+ok 9 - postValidation supports legacy type/status aliases
+ok 10 - storageService safeSaveWorkspace and safeLoadWorkspace use window.storage and migrate data
+ok 11 - storageService returns structured error when storage backend is unavailable
+ok 12 - aiService callAiMessages returns joined text with fake fetch
+ok 13 - aiService safeCallClaude returns structured error with failing fetch
+ok 14 - aiService rejects empty prompt
+ok 15 - exportService mdToHtml and buildDocHTML produce expected HTML
+ok 16 - exportService buildSlidePrompt includes section label and content
+ok 17 - exportService buildSlideshowHTML falls back on invalid slide JSON
+ok 18 - templateUtils buildCtx includes provided fields and omits missing ones
+ok 19 - templateUtils uid returns non-empty ids
+ok 20 - metaService buildMetaOAuthUrl includes app id, encoded redirect and scopes
+ok 21 - metaService serializeMetaError returns readable messages
+ok 22 - teamModel date helpers format and add days correctly
+ok 23 - teamModel exposes default team members and roles
+ok 24 - editorialTheme resolves shared pillar colors and project overrides
+ok 25 - editorialTheme exposes shared idea status styles
+ok 26 - markdown utility renders safe headings, emphasis and escaped html
+ok 27 - formatters parse metrics and format deltas consistently
+
+Unit tests: 27/27 passed
+Step 38 check OK - syntax/imports and unit tests passed.

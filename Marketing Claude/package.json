@@ -1,0 +1,7 @@
+{
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run_unit_tests.cjs",
+    "check": "node check_step38.cjs"
+  }
+}
