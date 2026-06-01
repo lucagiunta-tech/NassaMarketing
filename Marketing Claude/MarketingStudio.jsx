@@ -3447,6 +3447,7 @@ export default function App(){
         }
         setProjects(ps); setClients(cs);
         setActiveId(d.activeId||null);
+        const _activeP=ps.find(p=>p.id===d.activeId); if(_activeP?.clientId){ setActiveClientId(_activeP.clientId); setExpandedClients(ex=>[...new Set([...ex,_activeP.clientId])]); }
       } else {
         const {client:k,project:kp}=createKosmetikal();
         const {client:r,project:rp}=createCoopRadenza();
