@@ -21,7 +21,6 @@ export const META_SCOPES  = [
   "instagram_manage_comments",
   "pages_read_engagement",
   "pages_manage_posts",
-  "read_insights",
   "public_profile",
   "business_management",
 ].join(",");
