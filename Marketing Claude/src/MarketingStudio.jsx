@@ -76,6 +76,7 @@ import { createKosmetikal, createCoopRadenza } from "./templates";
 import { StrategicCascadeBanner, SectionContent } from "./modules/strategy";
 
 import { renderMd } from "./utils";
+import { ensureClientToken, buildClientUrl } from "./utils/clientAuth.js";
 
 // ─── SVG OUTLINE ICON SYSTEM ──────────────────────────────────────────────────
 // Monochromatic, 1.5px stroke, no fill — Lucide/Feather style
@@ -1729,11 +1730,11 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
   function setSocial(k,v){ setF(p=>({...p,social:{...p.social,[k]:v}})); }
   function setPortal(k,v){ setF(p=>({...p,portal:{...p.portal,[k]:v}})); }
   function setMeta(m){ setF(p=>({...p,meta:m})); }
-  function save(){ onUpdate({...f}); }
+  function save(){ onUpdate(ensureClientToken({...f})); }
 
   const clientProjects = projects.filter(p=>p.clientId===client.id);
   const slug = clientSlug(client.nome);
-  const portalUrl = `https://nassa-marketing-edw5.vercel.app/c/?portal=${slug}`;
+  const portalUrl = f.clientToken ? buildClientUrl(f.id, f.clientToken) : null;
   const pacchettoObj = PACCHETTI.find(p=>p.id===f.pacchetto)||PACCHETTI[2];
 
   // Meta page selection from global BM
@@ -1943,12 +1944,27 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
         {tab==="portale"&&(
           <div className="cs-card">
             <div className="cs-card-title">🔗 Portale cliente</div>
-            <div className="portal-url-row">
-              <div className="portal-url">{portalUrl}</div>
-              <button className="btn-ghost sm" onClick={()=>{navigator.clipboard?.writeText(portalUrl);setCopied(true);setTimeout(()=>setCopied(false),2000);}}>
-                {copied?"✓ Copiato":"🔗 Copia link"}
-              </button>
-            </div>
+            {!portalUrl ? (
+              <div style={{background:"#f8fafc",border:"1px solid #e5e7eb",borderRadius:8,padding:"12px 16px",marginBottom:12}}>
+                <div style={{fontSize:13,color:"#374151",marginBottom:8}}>🔒 Link sicuro non ancora generato per questo cliente.</div>
+                <button className="btn-primary sm" onClick={()=>{ const updated=ensureClientToken({...f}); setF(updated); onUpdate(updated); }}>
+                  🔗 Genera link sicuro
+                </button>
+              </div>
+            ) : (
+              <div className="portal-url-row">
+                <div className="portal-url" style={{fontSize:11,wordBreak:"break-all"}}>{portalUrl}</div>
+                <button className="btn-ghost sm" onClick={()=>{navigator.clipboard?.writeText(portalUrl);setCopied(true);setTimeout(()=>setCopied(false),2000);}}>
+                  {copied?"✓ Copiato":"🔗 Copia link"}
+                </button>
+                <button className="btn-ghost sm" style={{color:"var(--err)"}} onClick={()=>{
+                  if(!window.confirm("Rigenerare il link? Il vecchio link smetterà di funzionare.")) return;
+                  const updated={...f,clientToken:null};
+                  const fresh=ensureClientToken(updated);
+                  setF(fresh); onUpdate(fresh);
+                }} title="Rigenera token">🔄</button>
+              </div>
+            )}
             <div className="portal-toggles">
               <div className="portal-toggle-row">
                 <div><div style={{fontWeight:700,fontSize:13}}>Mostra Feed</div><div style={{fontSize:11,color:"var(--ink4)"}}>Il cliente può vedere e approvare i post del feed</div></div>
