@@ -36,7 +36,22 @@ function updatePublishingItem(ed, id, patch) {
   };
 }
 
-export function PublishingHubED({ project, onUpdate, globalMeta }) {
+
+// Per-client meta adapter (same logic as MarketingStudio.jsx)
+function clientMetaForPublish(client, globalMeta) {
+  const cm = client?.meta;
+  if (cm?.fbPageId || cm?.igUserId) {
+    return {
+      ig:       { userId: cm.igUserId || "", token: cm.igToken || "" },
+      fb:       { pageId: cm.fbPageId || "", token: cm.fbToken || "" },
+      allPages: cm.allPages || [],
+      nome:     cm.nomePagina || client?.nome || "",
+    };
+  }
+  return globalMeta || null;
+}
+
+export function PublishingHubED({ project, onUpdate, globalMeta, client=null }) {
   const items = getEditorialPosts(project);
   const approved = items.filter(item => isPostStatus(item, POST_STATUS.approvato) || item.status === "approvato");
   const [pubPost, setPubPost] = useState(null);
@@ -79,8 +94,8 @@ export function PublishingHubED({ project, onUpdate, globalMeta }) {
   return (
     <div className="pub-hub-wrap">
       <div className="pub-hub-meta-status">
-        {globalMeta
-          ? <div className="pub-meta-ok">🔗 Meta connesso: <strong>{globalMeta.nome}</strong> · {(globalMeta.allPages || []).length || 1} pagine</div>
+        {(client?.meta?.fbPageId ? {nome:client.meta.nomePagina||client?.nome} : globalMeta)
+          ? <div className="pub-meta-ok">🔗 Meta connesso: <strong>{client?.meta?.fbPageId ? (client.meta.nomePagina||client?.nome) : globalMeta?.nome}</strong> · {(globalMeta.allPages || []).length || 1} pagine</div>
           : <div className="pub-meta-warn">⚠️ Meta non connesso — usa il pulsante nella sidebar</div>}
       </div>
 
@@ -135,7 +150,7 @@ export function PublishingHubED({ project, onUpdate, globalMeta }) {
             immagineUrl: pubPost.immagineUrl || "",
             videoUrl: pubPost.videoUrl || "",
           }}
-          meta={globalMeta}
+          meta={clientMetaForPublish(client, globalMeta)}
           onClose={() => setPubPost(null)}
           onPublished={() => {
             markLive(pubPost.id);
