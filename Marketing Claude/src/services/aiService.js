@@ -1,83 +1,136 @@
-// =============================================================================
-// AI SERVICE
-// =============================================================================
-// Thin AI wrapper extracted from MarketingStudio.
-// Keeps the same public API used by the UI: callClaude(prompt, maxTokens).
+// aiService.js — Claude API wrapper with retry, prompt caching, safe parsing
 
-export const AI_DEFAULT_MODEL = "claude-sonnet-4-20250514";
-export const AI_DEFAULT_MAX_TOKENS = 1000;
-export const AI_DEFAULT_RETRIES = 2;
-export const AI_RETRY_DELAY_MS = 1500;
+const DEFAULT_MODEL      = "claude-sonnet-4-5-20251001";
+const DEFAULT_MAX_TOKENS = 1000;
+const RETRY_ATTEMPTS     = 2;
+const RETRY_DELAY_MS     = 1500;
+const API_URL            = "https://api.anthropic.com/v1/messages";
 
-export function serializeAiError(error) {
-  if (!error) return "Errore AI sconosciuto";
-  if (typeof error === "string") return error;
-  return error.message || String(error);
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
-export function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function serializeAiError(err) {
+  if (!err) return "Errore sconosciuto";
+  if (typeof err === "string") return err;
+  if (err.error?.message) return err.error.message;
+  if (err.message) return err.message;
+  try { return JSON.stringify(err); } catch { return String(err); }
 }
 
-export async function callAiMessages({
-  prompt,
-  maxTokens = AI_DEFAULT_MAX_TOKENS,
-  model = AI_DEFAULT_MODEL,
-  retries = AI_DEFAULT_RETRIES,
-  endpoint = "https://api.anthropic.com/v1/messages",
-  fetchImpl = typeof fetch !== "undefined" ? fetch : null,
-} = {}) {
-  if (!prompt || !String(prompt).trim()) {
-    throw new Error("Prompt AI vuoto");
+function parseAiText(raw) {
+  if (!raw) return "";
+  // Try JSON parse first (for structured responses), fall back to raw string
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try { return JSON.parse(trimmed); } catch { /* fall through to raw */ }
   }
-  if (!fetchImpl) {
-    throw new Error("Fetch non disponibile in questo ambiente");
+  // Strip markdown code fences if present
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
+  if (fenced) {
+    try { return JSON.parse(fenced[1]); } catch { return fenced[1]; }
+  }
+  return raw;
+}
+
+/**
+ * Core API call with retry.
+ * @param {string} prompt
+ * @param {object} opts
+ * @param {string}   [opts.model]
+ * @param {number}   [opts.maxTokens]
+ * @param {number}   [opts.retries]
+ * @param {string}   [opts.systemPrompt]  — cached system context (brand voice, etc.)
+ * @param {Function} [opts.fetchFn]
+ * @returns {Promise<string>}
+ */
+export async function callAiMessages(prompt, opts = {}) {
+  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+    throw new Error("Prompt non valido o vuoto.");
   }
 
-  let attempts = 0;
-  let lastError = null;
+  const model     = opts.model      || DEFAULT_MODEL;
+  const maxTokens = opts.maxTokens  || DEFAULT_MAX_TOKENS;
+  const retries   = opts.retries    ?? RETRY_ATTEMPTS;
+  const fetchFn   = opts.fetchFn    || (typeof fetch !== "undefined" ? fetch : null);
 
-  while (attempts < retries) {
+  if (!fetchFn) throw new Error("fetch non disponibile in questo ambiente.");
+
+  const apiKey = typeof window !== "undefined"
+    ? (window.__ANTHROPIC_KEY__ || import.meta?.env?.VITE_ANTHROPIC_API_KEY)
+    : process?.env?.ANTHROPIC_API_KEY;
+
+  if (!apiKey) throw new Error("Chiave API Anthropic non configurata.");
+
+  const messages = [{ role: "user", content: prompt }];
+
+  // Build request body — enable prompt caching on system prompt if provided
+  const body = {
+    model,
+    max_tokens: maxTokens,
+    messages,
+  };
+
+  if (opts.systemPrompt) {
+    body.system = [
+      {
+        type: "text",
+        text: opts.systemPrompt,
+        cache_control: { type: "ephemeral" },
+      },
+    ];
+  }
+
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAY_MS);
     try {
-      const response = await fetchImpl(endpoint, {
+      const res = await fetchFn(API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model,
-          max_tokens: maxTokens,
-          messages: [{ role: "user", content: prompt }],
-        }),
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-beta": "prompt-caching-2024-07-31",
+        },
+        body: JSON.stringify(body),
       });
 
-      const data = await response.json().catch(() => ({}));
+      const json = await res.json();
 
-      if (!response.ok) {
-        const apiMessage = data?.error?.message || data?.message || `Errore AI HTTP ${response.status}`;
-        throw new Error(apiMessage);
+      if (!res.ok) {
+        const msg = json?.error?.message || `HTTP ${res.status}`;
+        throw new Error(msg);
       }
 
-      return data.content?.map(block => block.text || "").join("") || "";
-    } catch (error) {
-      lastError = error;
-      attempts += 1;
-      if (attempts >= retries) break;
-      await sleep(AI_RETRY_DELAY_MS);
+      const raw = json?.content?.[0]?.text ?? "";
+      return raw;
+    } catch (err) {
+      lastError = err;
     }
   }
 
-  throw lastError || new Error("Errore AI non gestito");
+  throw new Error(serializeAiError(lastError));
 }
 
-export async function callClaude(prompt, maxTokens = AI_DEFAULT_MAX_TOKENS, options = {}) {
-  return callAiMessages({ prompt, maxTokens, ...options });
+/**
+ * Simple wrapper — returns parsed text or throws.
+ */
+export async function callClaude(prompt, maxTokens = DEFAULT_MAX_TOKENS, systemPrompt) {
+  const raw = await callAiMessages(prompt, { maxTokens, systemPrompt });
+  return parseAiText(raw);
 }
 
-export async function safeCallClaude(prompt, maxTokens = AI_DEFAULT_MAX_TOKENS, options = {}) {
+/**
+ * Safe wrapper — never throws; returns { ok, text, error }.
+ */
+export async function safeCallClaude(prompt, maxTokens = DEFAULT_MAX_TOKENS, systemPrompt) {
   try {
-    const text = await callClaude(prompt, maxTokens, options);
+    const text = await callClaude(prompt, maxTokens, systemPrompt);
     return { ok: true, text, error: null };
-  } catch (error) {
-    console.error("AI generation error", error);
-    return { ok: false, text: "", error: serializeAiError(error) };
+  } catch (err) {
+    return { ok: false, text: "", error: serializeAiError(err) };
   }
 }
+
+export default { callAiMessages, callClaude, safeCallClaude };
