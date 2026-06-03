@@ -8,13 +8,13 @@ import ClientPortal from './ClientPortal.jsx'
 import { AppErrorBoundary } from './ErrorBoundary.jsx'
 import { parseClientRoute } from './utils/clientAuth.js'
 
-const { isClientMode, projectId, token } = parseClientRoute();
+const { isClientMode, clientId, token } = parseClientRoute();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AppErrorBoundary>
       {isClientMode
-        ? <ClientPortal projectId={projectId} token={token} />
+        ? <ClientPortal clientId={clientId} token={token} />
         : <App />
       }
     </AppErrorBoundary>
