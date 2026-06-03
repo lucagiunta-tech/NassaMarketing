@@ -1,23 +1,29 @@
 // api/dropbox-token.js
 // Returns a short-lived Dropbox access token so the browser can upload directly.
-// Add these env vars in Vercel dashboard → Project Settings → Environment Variables:
-//   DROPBOX_APP_KEY, DROPBOX_REFRESH_TOKEN, DROPBOX_APP_SECRET
+// Env vars required in Vercel: DROPBOX_APP_KEY, DROPBOX_REFRESH_TOKEN, DROPBOX_APP_SECRET
 
 const DROPBOX_APP_KEY       = process.env.DROPBOX_APP_KEY;
 const DROPBOX_REFRESH_TOKEN = process.env.DROPBOX_REFRESH_TOKEN;
 const DROPBOX_APP_SECRET    = process.env.DROPBOX_APP_SECRET;
+const ALLOWED_ORIGIN        = process.env.META_REDIRECT_URI
+  ? new URL(process.env.META_REDIRECT_URI).origin
+  : "https://nassa-marketing-edw5.vercel.app";
 
 let _cachedToken = null;
 let _tokenExpiry = 0;
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGIN);
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Vary", "Origin");
+
   if (req.method === "OPTIONS") return res.status(200).end();
 
   if (!DROPBOX_APP_KEY || !DROPBOX_REFRESH_TOKEN || !DROPBOX_APP_SECRET) {
-    return res.status(500).json({ error: "Dropbox env vars not configured. Add DROPBOX_APP_KEY, DROPBOX_REFRESH_TOKEN, DROPBOX_APP_SECRET in Vercel." });
+    return res.status(500).json({
+      error: "Dropbox env vars not configured. Add DROPBOX_APP_KEY, DROPBOX_REFRESH_TOKEN, DROPBOX_APP_SECRET in Vercel.",
+    });
   }
 
   try {
