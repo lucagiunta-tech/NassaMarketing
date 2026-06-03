@@ -1729,15 +1729,18 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
 
   // Meta page selection from global BM
   const allPages = globalMeta?.allPages||[];
+  const clientPages = f.meta?.allPages?.length ? f.meta.allPages : allPages; // per-client first
 
   function selectMetaPage(pageId, tipo){
-    const pg = allPages.find(p=>p.id===pageId);
+    const pg = clientPages.find(p=>p.id===pageId) || allPages.find(p=>p.id===pageId);
     if(!pg) return;
     if(tipo==="ig"){
       setMeta({...(f.meta||{}), igUserId:pg.igId||"", igToken:pg.token, nomePagina:pg.nome});
     } else {
       setMeta({...(f.meta||{}), fbPageId:pg.id, fbToken:pg.token, nomePagina:pg.nome});
     }
+    // Auto-save so changes persist immediately
+    setTimeout(()=>{ onUpdate({...f, meta:{...f.meta}}); }, 100);
   }
 
   const TABS = [{id:"anagrafica",label:"📋 Anagrafica"},{id:"social",label:"📱 Social & Meta"},{id:"portale",label:"🔗 Portale"},{id:"progetti",label:"📂 Progetti"}];
@@ -1770,14 +1773,7 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
             <div className="cs-card-title">📋 Informazioni cliente</div>
             <div className="fg-row">
               <div className="fg"><label className="lbl">Nome *</label>
-              <label className="cs-toggle">
-                <div className="cs-toggle-info">
-                  <div className="cs-toggle-label">Mostra Meta Insights</div>
-                  <div className="cs-toggle-desc">Il cliente vede le statistiche Facebook nel portale</div>
-                </div>
-                <input type="checkbox" checked={f.portal?.mostraInsights??true} onChange={e=>setF(p=>({...p,portal:{...(p.portal||{}),mostraInsights:e.target.checked}}))}/>
-                <span className="cs-toggle-slider"/>
-              </label><input className="inp" value={f.nome} onChange={e=>set("nome",e.target.value)}/></div>
+<input className="inp" value={f.nome} onChange={e=>set("nome",e.target.value)}/></div>
               <div className="fg"><label className="lbl">Referente</label><input className="inp" placeholder="Nome cognome" value={f.referente} onChange={e=>set("referente",e.target.value)}/></div>
               <div className="fg"><label className="lbl">Email</label><input className="inp" type="email" placeholder="email@cliente.it" value={f.email} onChange={e=>set("email",e.target.value)}/></div>
             </div>
@@ -1822,31 +1818,112 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
           </div>
 
           <div className="cs-card">
-            <div className="cs-card-title">🔗 Connetti Meta (Instagram + Facebook)</div>
-            {!globalMeta&&<div className="pub-meta-warn">⚠️ Connetti prima Meta dalla sidebar (account Nassa Business Manager).</div>}
-            {globalMeta&&allPages.length===0&&<div className="pub-meta-warn">⚠️ Nessuna pagina trovata nel Business Manager. Verifica la connessione.</div>}
-            {globalMeta&&allPages.length>0&&(
-              <>
-                <div className="meta-platforms-grid">
-                  <div className="meta-plat-card" style={{borderColor:f.meta?.igUserId?"#10B981":"#E2E8F0"}}>
-                    <div className="meta-plat-hdr" style={{color:"#E1306C"}}><span className="social-badge" style={{background:"#E1306C"}}>IG</span> Instagram {f.meta?.igUserId&&<span className="meta-conn-badge">✓ Connesso</span>}</div>
-                    {f.meta?.igUserId
-                      ?<><div className="meta-plat-val">@{f.meta.nomePagina||"connesso"}</div><button className="btn-ghost sm" onClick={()=>setMeta({...(f.meta||{}),igUserId:"",igToken:""})}>Disconnetti</button></>
-                      :<select className="inp" onChange={e=>selectMetaPage(e.target.value,"ig")}><option value="">Seleziona pagina IG…</option>{allPages.filter(p=>p.igId).map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select>
-                    }
+            <div className="cs-card-title">🔗 Connetti Meta — {f.nome||"questo cliente"}</div>
+            <div style={{fontSize:11,color:"var(--ink4)",marginBottom:12}}>
+              Ogni cliente usa la propria pagina. Connetti il tuo account Nassa per vedere le pagine disponibili, poi seleziona quella di questo cliente.
+            </div>
+
+            {/* Step 1 — Connetti / Ricollega */}
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+              <button className="btn-primary" onClick={()=>{
+                openMetaOAuth(
+                  pages=>{
+                    const mapped=pages.map(p=>({
+                      id:p.id, nome:p.name,
+                      igId:p.instagram_business_account?.id||"",
+                      token:p.access_token
+                    }));
+                    const updated={...(f.meta||{}),allPages:mapped,connectedAt:Date.now()};
+                    setMeta(updated);
+                    // Auto-save immediately so other views see the pages
+                    setTimeout(()=>onUpdate({...f,meta:updated}),50);
+                  },
+                  err=>alert("Errore Meta: "+err)
+                );
+              }}>
+                {clientPages.length?"🔄 Ricollega account":"🔐 Connetti account Meta"}
+              </button>
+              {clientPages.length>0&&(
+                <span style={{fontSize:11,color:"#059669",fontWeight:600}}>
+                  ✓ {clientPages.length} pagina/e disponibile/i
+                  {f.meta?.connectedAt&&" · "+new Date(f.meta.connectedAt).toLocaleDateString("it-IT")}
+                </span>
+              )}
+            </div>
+
+            {/* Step 2 — Seleziona pagina per questo cliente */}
+            {clientPages.length>0&&(
+              <div className="meta-platforms-grid">
+                {/* Instagram */}
+                <div className="meta-plat-card" style={{borderColor:f.meta?.igUserId?"#10B981":"#E2E8F0"}}>
+                  <div className="meta-plat-hdr" style={{color:"#E1306C"}}>
+                    <span className="social-badge" style={{background:"#E1306C"}}>IG</span>
+                    Instagram
+                    {f.meta?.igUserId&&<span className="meta-conn-badge">✓ Connesso</span>}
                   </div>
-                  <div className="meta-plat-card" style={{borderColor:f.meta?.fbPageId?"#10B981":"#E2E8F0"}}>
-                    <div className="meta-plat-hdr" style={{color:"#1877F2"}}><span className="social-badge" style={{background:"#1877F2"}}>FB</span> Facebook {f.meta?.fbPageId&&<span className="meta-conn-badge">✓ Connesso</span>}</div>
-                    {f.meta?.fbPageId
-                      ?<><div className="meta-plat-val">{f.meta.nomePagina||"connesso"}</div><button className="btn-ghost sm" onClick={()=>setMeta({...(f.meta||{}),fbPageId:"",fbToken:""})}>Disconnetti</button></>
-                      :<select className="inp" onChange={e=>selectMetaPage(e.target.value,"fb")}><option value="">Seleziona pagina FB…</option>{allPages.map(p=><option key={p.id} value={p.id}>{p.nome}</option>)}</select>
-                    }
-                  </div>
+                  {f.meta?.igUserId
+                    ?<>
+                      <div className="meta-plat-val">@{f.meta.nomePagina||"account IG"}</div>
+                      <button className="btn-ghost sm" onClick={()=>{
+                        const u={...(f.meta||{}),igUserId:"",igToken:""};
+                        setMeta(u);
+                        setTimeout(()=>onUpdate({...f,meta:u}),50);
+                      }}>Rimuovi</button>
+                    </>
+                    :<>
+                      <div style={{fontSize:11,color:"var(--ink4)",marginBottom:6}}>Seleziona l'account IG di {f.nome||"questo cliente"}</div>
+                      <select className="inp" onChange={e=>selectMetaPage(e.target.value,"ig")}>
+                        <option value="">— Scegli account IG —</option>
+                        {clientPages.filter(p=>p.igId).map(p=>(
+                          <option key={p.id} value={p.id}>{p.nome} (@IG)</option>
+                        ))}
+                      </select>
+                      {clientPages.filter(p=>p.igId).length===0&&(
+                        <div style={{fontSize:10,color:"#F59E0B",marginTop:4}}>⚠️ Nessun account Instagram Business trovato nelle pagine.</div>
+                      )}
+                    </>
+                  }
                 </div>
-                <button className="btn-ghost sm" style={{marginTop:10}} onClick={()=>{ /* Re-open global OAuth */ }}>🔄 Ricollega / Cambia account</button>
-                <div className="meta-warn-box">⚠️ Il token OAuth scade dopo 60 giorni — usa il metodo Business Manager per token permanenti. Assicurati che Instagram sia un account Business o Creator collegato alla Pagina Facebook.</div>
-              </>
+
+                {/* Facebook */}
+                <div className="meta-plat-card" style={{borderColor:f.meta?.fbPageId?"#10B981":"#E2E8F0"}}>
+                  <div className="meta-plat-hdr" style={{color:"#1877F2"}}>
+                    <span className="social-badge" style={{background:"#1877F2"}}>FB</span>
+                    Facebook
+                    {f.meta?.fbPageId&&<span className="meta-conn-badge">✓ Connesso</span>}
+                  </div>
+                  {f.meta?.fbPageId
+                    ?<>
+                      <div className="meta-plat-val">{f.meta.nomePagina||"pagina FB"}</div>
+                      <button className="btn-ghost sm" onClick={()=>{
+                        const u={...(f.meta||{}),fbPageId:"",fbToken:""};
+                        setMeta(u);
+                        setTimeout(()=>onUpdate({...f,meta:u}),50);
+                      }}>Rimuovi</button>
+                    </>
+                    :<>
+                      <div style={{fontSize:11,color:"var(--ink4)",marginBottom:6}}>Seleziona la pagina FB di {f.nome||"questo cliente"}</div>
+                      <select className="inp" onChange={e=>selectMetaPage(e.target.value,"fb")}>
+                        <option value="">— Scegli pagina FB —</option>
+                        {clientPages.map(p=>(
+                          <option key={p.id} value={p.id}>{p.nome}</option>
+                        ))}
+                      </select>
+                    </>
+                  }
+                </div>
+              </div>
             )}
+
+            {!clientPages.length&&(
+              <div style={{fontSize:11,color:"var(--ink4)",padding:"8px 0"}}>
+                ℹ️ Dopo aver connesso l'account, seleziona la pagina specifica per {f.nome||"questo cliente"}.
+              </div>
+            )}
+            <div className="meta-warn-box" style={{marginTop:10}}>
+              🔒 I token salvati sono personali e non vengono mai condivisi tra clienti diversi.
+              Il token scade dopo 60 giorni — riconnetti periodicamente.
+            </div>
           </div>
         </>)}
 
@@ -1868,6 +1945,10 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
               <div className="portal-toggle-row">
                 <div><div style={{fontWeight:700,fontSize:13}}>Mostra Pipeline (Kanban)</div><div style={{fontSize:11,color:"var(--ink4)"}}>Il cliente può vedere lo stato dei contenuti in produzione</div></div>
                 <Toggle checked={f.portal.mostraPipeline} onChange={v=>setPortal("mostraPipeline",v)}/>
+              </div>
+              <div className="portal-toggle-row">
+                <div><div style={{fontWeight:700,fontSize:13}}>Mostra Meta Insights</div><div style={{fontSize:11,color:"var(--ink4)"}}>Il cliente vede le statistiche Facebook della sua pagina</div></div>
+                <Toggle checked={f.portal?.mostraInsights??true} onChange={v=>setPortal("mostraInsights",v)}/>
               </div>
             </div>
             <div style={{marginTop:16}}>
@@ -3674,6 +3755,32 @@ export default function App(){
 
   const activeProj   = projects.find(p=>p.id===activeId);
   const activeClient = clients.find(c=>c.id===activeClientId);
+
+  // Standalone portal mode: ?portal=clientSlug → no sidebar, clean client view
+  const _pp = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("portal") : null;
+  if(_pp && view === "portal" && activeClient) {
+    return (
+      <div className="portal-standalone">
+        <div className="portal-standalone-hdr">
+          <div className="portal-standalone-brand">
+            <div style={{width:32,height:32,borderRadius:8,background:"#1B4DFF",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontWeight:800,fontSize:14}}>N</div>
+            <span style={{fontWeight:700,fontSize:13,color:"var(--ink2)"}}>NASSA STUDIO</span>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontWeight:700,fontSize:16,color:"var(--ink1)"}}>{activeClient.nome}</div>
+            <div style={{fontSize:11,color:"var(--ink4)"}}>Area riservata cliente</div>
+          </div>
+        </div>
+        <ClientPortalPreview
+          client={activeClient}
+          projects={projects.filter(p=>p.clientId===activeClient.id)}
+          onBack={null}
+          onUpdateProject={handleUpdate}
+          standaloneMode={true}
+        />
+      </div>
+    );
+  }
 
   if(!loaded) return <div className="app"><div className="loading">Caricamento…</div></div>;
 
