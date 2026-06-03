@@ -158,7 +158,7 @@ export const APP_CSS = `
   border-left:3px solid var(--nav-active-border);
   padding-left:8px;
 }
-.sb-client-name{flex:1;font-size:12px;font-weight:700;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sb-client-name{flex:1;font-size:12px;font-weight:700;color:#F1F5F9;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .sb-chevron-btn{background:none;border:none;color:var(--ink4);cursor:pointer;font-size:10px;padding:2px 3px;flex-shrink:0;line-height:1;transition:color .15s;}
 .sb-chevron-btn:hover{color:var(--gold);}
 .sb-icon-btn{background:none;border:none;color:var(--ink4);cursor:pointer;font-size:13px;padding:3px 4px;flex-shrink:0;border-radius:4px;transition:all .15s;line-height:1;}
@@ -187,7 +187,7 @@ export const APP_CSS = `
 }
 .sb-proj-row.active .sb-proj-dot{background:var(--neon-magenta);}
 .sb-proj-row:hover .sb-proj-dot{background:rgba(200,0,255,.5);}
-.sb-proj-name{font-size:11px;font-weight:500;color:var(--ink3);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .15s;}
+.sb-proj-name{font-size:11px;font-weight:500;color:#94A3B8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:color .15s;}
 .sb-proj-row.active .sb-proj-name{color:var(--ink);font-weight:600;}
 .sb-proj-empty{padding:6px 10px 6px 24px;font-size:10px;color:var(--ink4);cursor:pointer;border-radius:6px;}
 .sb-proj-empty:hover{color:var(--gold);background:var(--gold-bg);}
@@ -1513,7 +1513,7 @@ export const APP_CSS = `
 /* SIDEBAR FILE EXPLORER */
 .sb-client-group{margin-bottom:2px;}
 .sb-client-row{display:flex;align-items:center;padding:6px 8px;border-radius:6px;gap:4px;transition:background .1s;}
-.sb-client-row:hover{background:#1E293B;}
+.sb-client-row:hover{background:#1E293B;} .sb-client-row:hover .sb-client-name{color:#F8FAFC;}
 .sb-client-active{background:#1E293B;}
 .sb-chevron-btn{background:none;border:none;color:#64748B;cursor:pointer;font-size:9px;width:16px;flex-shrink:0;}
 .sb-client-name{flex:1;font-size:12px;font-weight:600;color:#E2E8F0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -1530,7 +1530,7 @@ export const APP_CSS = `
 .sb-proj-empty:hover{color:#94A3B8;}
 
 /* CLIENT SETTINGS VIEW */
-.cs-wrap{flex:1;min-height:0;overflow-y:auto;padding:32px 48px;}
+.cs-wrap{flex:1;min-height:0;height:0;overflow-y:auto;padding:32px 48px;}
 .cs-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
 .cs-title{display:flex;align-items:center;gap:14px;}
 .cs-avatar{width:48px;height:48px;border-radius:12px;background:var(--gold);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800;flex-shrink:0;}
