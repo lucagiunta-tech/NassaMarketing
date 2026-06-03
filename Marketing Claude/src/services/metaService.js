@@ -382,6 +382,34 @@ export async function fbPublish(pageId, token, post, scheduleUnix) {
   return parseMetaJson(response, "Facebook publish");
 }
 
+
+// ─── FETCH PAGES FROM TOKEN ────────────────────────────────────────────────────
+
+/**
+ * Fetch all FB pages + IG accounts from a long-lived Business Manager token.
+ * Used by GlobalMetaConnect (no OAuth popup needed).
+ *
+ * @param {string} bmToken  Long-lived user token or System User token
+ * @returns {{ ok: boolean, pages: object[], error: string|null }}
+ */
+export async function fetchPagesFromToken(bmToken) {
+  if (!bmToken) return { ok: false, pages: [], error: "Token mancante." };
+  try {
+    const url = ${META_API}/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username}&access_token=;
+    const response = await metaFetch(url);
+    const data = await parseMetaJson(response, "fetchPagesFromToken");
+    const pages = (data.data || []).map(p => ({
+      id:    p.id,
+      nome:  p.name,
+      token: p.access_token,
+      igId:  p.instagram_business_account?.id   || "",
+      igUsername: p.instagram_business_account?.username || "",
+    }));
+    return { ok: true, pages, error: null };
+  } catch (err) {
+    return { ok: false, pages: [], error: serializeMetaError(err) };
+  }
+}
 // ─── SAFE WRAPPERS ────────────────────────────────────────────────────────────
 
 export async function safeIgPublish(...args) {
