@@ -1833,33 +1833,24 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
               Ogni cliente usa la propria pagina. Connetti il tuo account Nassa per vedere le pagine disponibili, poi seleziona quella di questo cliente.
             </div>
 
-            {/* Step 1 — Connetti / Ricollega */}
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,flexWrap:"wrap"}}>
-              <button className="btn-primary" onClick={()=>{
-                openMetaOAuth(
-                  pages=>{
-                    const mapped=pages.map(p=>({
-                      id:p.id, nome:p.name,
-                      igId:p.instagram_business_account?.id||"",
-                      token:p.access_token
-                    }));
-                    const updated={...(f.meta||{}),allPages:mapped,connectedAt:Date.now()};
-                    setMeta(updated);
-                    // Auto-save immediately so other views see the pages
-                    setTimeout(()=>onUpdate({...f,meta:updated}),50);
-                  },
-                  err=>alert("Errore Meta: "+err)
-                );
-              }}>
-                {clientPages.length?"🔄 Ricollega account":"🔐 Connetti account Meta"}
-              </button>
-              {clientPages.length>0&&(
-                <span style={{fontSize:11,color:"#059669",fontWeight:600}}>
-                  ✓ {clientPages.length} pagina/e disponibile/i
-                  {f.meta?.connectedAt&&" · "+new Date(f.meta.connectedAt).toLocaleDateString("it-IT")}
-                </span>
-              )}
-            </div>
+            {/* Pages loaded from global BM token — no per-client OAuth needed */}
+            {clientPages.length > 0 ? (
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,background:"#F0FDF4",border:"1px solid #BBF7D0",borderRadius:8,padding:"8px 12px"}}>
+                <span style={{fontSize:16}}>✅</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#166534"}}>{clientPages.length} pagine disponibili</div>
+                  <div style={{fontSize:11,color:"#16A34A"}}>Caricate dal token Business Manager della sidebar. Seleziona la pagina di questo cliente qui sotto.</div>
+                </div>
+              </div>
+            ) : (
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14,background:"#FFF7ED",border:"1px solid #FED7AA",borderRadius:8,padding:"8px 12px"}}>
+                <span style={{fontSize:16}}>⚠️</span>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#92400E"}}>Nessuna pagina caricata</div>
+                  <div style={{fontSize:11,color:"#B45309"}}>Collega prima il token Business Manager dalla sidebar (in basso a sinistra).</div>
+                </div>
+              </div>
+            )}
 
             {/* Step 2 — Card picker (nassa-gestione style) */}
             {clientPages.length>0&&!f.meta?.fbPageId&&(
