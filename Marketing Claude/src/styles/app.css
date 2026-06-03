@@ -158,7 +158,7 @@
 .pr-fill{height:100%;background:var(--gold);transition:width .3s;}
 
 /* MAIN */
-.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.main{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
 
 /* ═══════════════════════════════════════════════════════
    DASHBOARD
@@ -1475,7 +1475,7 @@
 .sb-client-row:hover{background:#1E293B;}
 .sb-client-active{background:#1E293B;}
 .sb-chevron-btn{background:none;border:none;color:#64748B;cursor:pointer;font-size:9px;width:16px;flex-shrink:0;}
-.sb-client-name{flex:1;font-size:12px;font-weight:600;color:#E2E8F0;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-client-name{flex:1;font-size:12px;font-weight:600;color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sb-icon-btn{background:none;border:none;color:#64748B;cursor:pointer;font-size:12px;padding:2px 4px;border-radius:3px;flex-shrink:0;}
 .sb-icon-btn:hover{background:#0F172A;color:#94A3B8;}
 .sb-proj-row{display:flex;align-items:center;gap:6px;padding:5px 8px 5px 24px;border-radius:5px;cursor:pointer;border-left:2px solid transparent;margin-bottom:1px;transition:all .1s;}
@@ -1483,13 +1483,13 @@
 .sb-proj-row.active{background:#1E293B;border-left-color:#0EA5E9;}
 .sb-proj-dot{width:5px;height:5px;border-radius:50%;background:#475569;flex-shrink:0;}
 .sb-proj-row.active .sb-proj-dot{background:#0EA5E9;}
-.sb-proj-name{font-size:11px;color:#94A3B8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.sb-proj-row.active .sb-proj-name{color:#E2E8F0;font-weight:500;}
+.sb-proj-name{font-size:11px;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-proj-row.active .sb-proj-name{color:var(--ink);font-weight:600;}
 .sb-proj-empty{font-size:10px;color:#475569;padding:4px 8px 4px 24px;cursor:pointer;font-style:italic;}
 .sb-proj-empty:hover{color:#94A3B8;}
 
 /* CLIENT SETTINGS VIEW */
-.cs-wrap{flex:1;overflow-y:auto;padding:32px 48px;}
+.cs-wrap{flex:1;min-height:0;overflow-y:auto;padding:32px 48px;}
 .cs-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
 .cs-title{display:flex;align-items:center;gap:14px;}
 .cs-avatar{width:48px;height:48px;border-radius:12px;background:var(--gold);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800;flex-shrink:0;}
@@ -1976,7 +1976,7 @@
 .gcal-th-act{color:var(--gold)!important;background:var(--gold-bg)!important}
 
 /* ── CAPTION SCORER ─────────────────────────────────────────────────────────── */
-.cs-wrap{border:1px solid var(--border);border-radius:var(--r2);overflow:hidden;background:var(--w)}
+.cs-wrap{border:1px solid var(--border);border-radius:var(--r2);background:var(--w)}
 .cs-compact .cs-header{cursor:pointer}
 .cs-header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:12px;border-bottom:1px solid var(--border)}
 .cs-header-left{display:flex;align-items:center;gap:10px}
