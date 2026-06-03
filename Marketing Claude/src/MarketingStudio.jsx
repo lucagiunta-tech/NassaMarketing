@@ -590,7 +590,16 @@ const PostGridCard = memo(function PostGridCard({ item, members, isSelected, onC
         {/* Hover overlay */}
         <div className="pgc-overlay">
           <button className="pgc-ov-btn" onClick={e => { e.stopPropagation(); onEdit(item); }}>✎ Modifica</button>
-          {nextStato && <button className="pgc-ov-btn" onClick={advance}>{STATI_NEXT_LABEL[normalizedStato]} →</button>}
+          {/* Full status selector — all statuses, not just next */}
+          <select
+            className="pgc-ov-stato-sel"
+            value={item.stato||"bozza"}
+            onClick={e => e.stopPropagation()}
+            onChange={e => { e.stopPropagation(); onSave({...item, stato: e.target.value}); }}>
+            {FEED_STATI.map(s=>(
+              <option key={s} value={s}>{FEED_STATI_STYLE[s]?.icon} {FEED_STATI_STYLE[s]?.label||s}</option>
+            ))}
+          </select>
           <button className="pgc-ov-btn pgc-del-btn" onClick={e => { e.stopPropagation(); onDelete(item.id); }}>🗑</button>
         </div>
       </div>
@@ -1851,66 +1860,69 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
               )}
             </div>
 
-            {/* Step 2 — Seleziona pagina per questo cliente */}
-            {clientPages.length>0&&(
+            {/* Step 2 — Card picker (nassa-gestione style) */}
+            {clientPages.length>0&&!f.meta?.fbPageId&&(
+              <div className="meta-page-picker">
+                <div className="meta-page-picker-hdr">
+                  <span style={{fontWeight:700,color:"#fff"}}>Scegli la pagina per <em>{f.nome||"questo cliente"}</em></span>
+                  <span style={{fontSize:11,color:"rgba(255,255,255,.75)"}}>Seleziona pagina Facebook + account Instagram</span>
+                </div>
+                <div className="meta-page-picker-list">
+                  {clientPages.map(page=>{
+                    const igAcc = page.igId ? {id:page.igId, name:page.nome} : null;
+                    return(
+                      <button key={page.id} className="meta-page-row"
+                        onClick={()=>{
+                          const u={...(f.meta||{}),
+                            fbPageId:page.id, fbToken:page.token, nomePagina:page.nome,
+                            igUserId:page.igId||"", igToken:page.igId?page.token:"",
+                          };
+                          setMeta(u);
+                          setTimeout(()=>onUpdate({...f,meta:u}),50);
+                        }}>
+                        <div className="meta-page-avatar">{(page.nome||"P")[0]}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{page.nome}</div>
+                          <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                            <span className="meta-tag-fb">📘 Facebook</span>
+                            {page.igId
+                              ?<span className="meta-tag-ig">📸 Instagram</span>
+                              :<span className="meta-tag-none">Nessun IG collegato</span>
+                            }
+                          </div>
+                        </div>
+                        <span className="meta-page-sel-btn">Seleziona →</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Connected status */}
+            {f.meta?.fbPageId&&(
               <div className="meta-platforms-grid">
-                {/* Instagram */}
                 <div className="meta-plat-card" style={{borderColor:f.meta?.igUserId?"#10B981":"#E2E8F0"}}>
                   <div className="meta-plat-hdr" style={{color:"#E1306C"}}>
                     <span className="social-badge" style={{background:"#E1306C"}}>IG</span>
-                    Instagram
-                    {f.meta?.igUserId&&<span className="meta-conn-badge">✓ Connesso</span>}
+                    Instagram {f.meta?.igUserId&&<span className="meta-conn-badge">✓ Connesso</span>}
                   </div>
                   {f.meta?.igUserId
-                    ?<>
-                      <div className="meta-plat-val">@{f.meta.nomePagina||"account IG"}</div>
-                      <button className="btn-ghost sm" onClick={()=>{
-                        const u={...(f.meta||{}),igUserId:"",igToken:""};
-                        setMeta(u);
-                        setTimeout(()=>onUpdate({...f,meta:u}),50);
-                      }}>Rimuovi</button>
-                    </>
-                    :<>
-                      <div style={{fontSize:11,color:"var(--ink4)",marginBottom:6}}>Seleziona l'account IG di {f.nome||"questo cliente"}</div>
-                      <select className="inp" onChange={e=>selectMetaPage(e.target.value,"ig")}>
-                        <option value="">— Scegli account IG —</option>
-                        {clientPages.filter(p=>p.igId).map(p=>(
-                          <option key={p.id} value={p.id}>{p.nome} (@IG)</option>
-                        ))}
-                      </select>
-                      {clientPages.filter(p=>p.igId).length===0&&(
-                        <div style={{fontSize:10,color:"#F59E0B",marginTop:4}}>⚠️ Nessun account Instagram Business trovato nelle pagine.</div>
-                      )}
-                    </>
+                    ?<><div className="meta-plat-val">@{f.meta.nomePagina}</div></>
+                    :<div style={{fontSize:11,color:"#F59E0B"}}>⚠️ Nessun account IG Business collegato a questa pagina</div>
                   }
                 </div>
-
-                {/* Facebook */}
-                <div className="meta-plat-card" style={{borderColor:f.meta?.fbPageId?"#10B981":"#E2E8F0"}}>
+                <div className="meta-plat-card" style={{borderColor:"#10B981"}}>
                   <div className="meta-plat-hdr" style={{color:"#1877F2"}}>
                     <span className="social-badge" style={{background:"#1877F2"}}>FB</span>
-                    Facebook
-                    {f.meta?.fbPageId&&<span className="meta-conn-badge">✓ Connesso</span>}
+                    Facebook <span className="meta-conn-badge">✓ Connesso</span>
                   </div>
-                  {f.meta?.fbPageId
-                    ?<>
-                      <div className="meta-plat-val">{f.meta.nomePagina||"pagina FB"}</div>
-                      <button className="btn-ghost sm" onClick={()=>{
-                        const u={...(f.meta||{}),fbPageId:"",fbToken:""};
-                        setMeta(u);
-                        setTimeout(()=>onUpdate({...f,meta:u}),50);
-                      }}>Rimuovi</button>
-                    </>
-                    :<>
-                      <div style={{fontSize:11,color:"var(--ink4)",marginBottom:6}}>Seleziona la pagina FB di {f.nome||"questo cliente"}</div>
-                      <select className="inp" onChange={e=>selectMetaPage(e.target.value,"fb")}>
-                        <option value="">— Scegli pagina FB —</option>
-                        {clientPages.map(p=>(
-                          <option key={p.id} value={p.id}>{p.nome}</option>
-                        ))}
-                      </select>
-                    </>
-                  }
+                  <div className="meta-plat-val">{f.meta.nomePagina}</div>
+                  <button className="btn-ghost sm" style={{marginTop:6}} onClick={()=>{
+                    const u={...(f.meta||{}),fbPageId:"",fbToken:"",igUserId:"",igToken:"",nomePagina:""};
+                    setMeta(u);
+                    setTimeout(()=>onUpdate({...f,meta:u}),50);
+                  }}>🔄 Cambia pagina</button>
                 </div>
               </div>
             )}
