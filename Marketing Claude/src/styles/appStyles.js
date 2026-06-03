@@ -199,7 +199,7 @@ export const APP_CSS = `
 .pr-fill{height:100%;background:var(--gold);transition:width .3s;}
 
 /* MAIN */
-.main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.main{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
 
 /* ═══════════════════════════════════════════════════════
    DASHBOARD
@@ -1530,7 +1530,7 @@ export const APP_CSS = `
 .sb-proj-empty:hover{color:#94A3B8;}
 
 /* CLIENT SETTINGS VIEW */
-.cs-wrap{flex:1;overflow-y:auto;padding:32px 48px;}
+.cs-wrap{flex:1;min-height:0;overflow-y:auto;padding:32px 48px;}
 .cs-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
 .cs-title{display:flex;align-items:center;gap:14px;}
 .cs-avatar{width:48px;height:48px;border-radius:12px;background:var(--gold);display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:800;flex-shrink:0;}
