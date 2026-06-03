@@ -1,9 +1,5 @@
 // clientAuth.js — Client portal token utilities
 
-/**
- * Generate a random client access token (UUID v4-style).
- * Stored per-project in project.clientToken.
- */
 export function generateClientToken() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
@@ -12,38 +8,36 @@ export function generateClientToken() {
 }
 
 /**
- * Build the shareable client portal URL for a project.
- * Format: /c/{projectId}/{clientToken}
+ * Build the shareable client portal URL.
+ * Format: /c/{clientId}/{clientToken}
  */
-export function buildClientUrl(projectId, clientToken) {
+export function buildClientUrl(clientId, clientToken) {
   const base = window.location.origin;
-  return `${base}/c/${projectId}/${clientToken}`;
+  return `${base}/c/${clientId}/${clientToken}`;
 }
 
 /**
  * Parse client portal params from current URL.
- * Returns { isClientMode, projectId, token } or { isClientMode: false }.
+ * Returns { isClientMode, clientId, token } or { isClientMode: false }.
  */
 export function parseClientRoute() {
-  const match = window.location.pathname.match(/^\/c\/([^/]+)\/([^/]+)/);
-  if (!match) return { isClientMode: false, projectId: null, token: null };
-  return { isClientMode: true, projectId: match[1], token: match[2] };
+  const match = window.location.pathname.match(/^\/c\/([^/?]+)\/([^/?]+)/);
+  if (!match) return { isClientMode: false, clientId: null, token: null };
+  return { isClientMode: true, clientId: match[1], token: match[2] };
 }
 
 /**
- * Validate that the URL token matches the project's stored clientToken.
- * Returns true if valid.
+ * Validate URL token against client's stored clientToken.
  */
-export function validateClientToken(project, urlToken) {
-  if (!project || !urlToken) return false;
-  return project.clientToken === urlToken;
+export function validateClientToken(client, urlToken) {
+  if (!client || !urlToken) return false;
+  return client.clientToken === urlToken;
 }
 
 /**
- * Ensure a project has a clientToken; generates one if missing.
- * Returns the (possibly updated) project object.
+ * Ensure a client/project has a clientToken; generates one if missing.
  */
-export function ensureClientToken(project) {
-  if (project.clientToken) return project;
-  return { ...project, clientToken: generateClientToken() };
+export function ensureClientToken(obj) {
+  if (obj.clientToken) return obj;
+  return { ...obj, clientToken: generateClientToken() };
 }
