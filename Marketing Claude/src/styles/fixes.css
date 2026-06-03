@@ -1,0 +1,207 @@
+/* fixes.css — Design consistency + responsiveness fixes.
+   Import this AFTER appStyles.js / app.css in main.jsx or App.jsx:
+   import './styles/fixes.css';
+*/
+
+/* ── 1. Unify color tokens (override purple from index.css → blue design system) ── */
+:root {
+  --accent:        #006EFF;
+  --accent-light:  #eff6ff;
+  --accent-dark:   #0050cc;
+  --success:       #22c55e;
+  --warning:       #f59e0b;
+  --danger:        #ef4444;
+  --ink:           #111827;
+  --ink-2:         #374151;
+  --ink-3:         #6b7280;
+  --border:        #e5e7eb;
+  --bg:            #ffffff;
+  --bg-2:          #f8fafc;
+  --bg-3:          #f1f5f9;
+  --radius-sm:     6px;
+  --radius-md:     10px;
+  --radius-lg:     16px;
+  --shadow-sm:     0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:     0 4px 12px rgba(0,0,0,.10);
+  --shadow-lg:     0 8px 24px rgba(0,0,0,.12);
+  --font-sans:     'Inter', system-ui, -apple-system, sans-serif;
+  --space-1:       4px;
+  --space-2:       8px;
+  --space-3:       12px;
+  --space-4:       16px;
+  --space-6:       24px;
+  --space-8:       32px;
+}
+
+/* Override purple accent from index.css */
+a { color: var(--accent); }
+
+/* ── 2. Typography baseline ─────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--ink);
+  background: var(--bg-2);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── 3. Status badge accessibility (icon fallback for colorblind users) ─────── */
+[data-status="approvato"]::before      { content: "✓ "; }
+[data-status="revisione"]::before      { content: "⏳ "; }
+[data-status="non-approvato"]::before  { content: "✗ "; }
+[data-status="schedulato"]::before     { content: "📅 "; }
+[data-status="pubblicato"]::before     { content: "🟢 "; }
+[data-status="bozza"]::before          { content: "✏️ "; }
+
+/* ── 4. Cards — consistent shadow system ────────────────────────────────────── */
+.nms-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+}
+.nms-card:hover { box-shadow: var(--shadow-md); }
+
+/* ── 5. Touch targets — min 44px for all icon buttons ───────────────────────── */
+button, [role="button"] {
+  min-height: 36px;
+  min-width: 36px;
+}
+.icon-btn {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── 6. Loading skeleton ─────────────────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: .4; }
+}
+.skeleton {
+  background: var(--bg-3);
+  border-radius: var(--radius-sm);
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+.skeleton-text  { height: 14px; margin-bottom: 8px; }
+.skeleton-title { height: 20px; width: 60%; margin-bottom: 12px; }
+.skeleton-thumb { aspect-ratio: 1; width: 100%; }
+
+/* ── 7. Spinner ──────────────────────────────────────────────────────────────── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  width: 32px; height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+/* ── 8. Tables — horizontal scroll on mobile ────────────────────────────────── */
+.nms-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.nms-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.nms-table th, .nms-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.nms-table th { font-size: 12px; font-weight: 600; color: var(--ink-3); background: var(--bg-2); }
+
+/* ── 9. Modals — max-height + scroll on small screens ───────────────────────── */
+.nms-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 16px;
+}
+.nms-modal {
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+  max-width: 640px; width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+/* ── 10. Kanban board — horizontal scroll on mobile ─────────────────────────── */
+.kanban-board {
+  display: flex; gap: 16px;
+  overflow-x: auto; -webkit-overflow-scrolling: touch;
+  padding-bottom: 12px;
+}
+.kanban-col {
+  flex: 0 0 260px;
+  min-width: 260px;
+}
+
+/* ── 11. Sidebar — mobile drawer ────────────────────────────────────────────── */
+.nms-sidebar {
+  width: 240px;
+  transition: transform .25s ease;
+}
+@media (max-width: 768px) {
+  .nms-sidebar {
+    position: fixed; left: 0; top: 0; bottom: 0; z-index: 90;
+    transform: translateX(-100%);
+    box-shadow: var(--shadow-lg);
+  }
+  .nms-sidebar.open { transform: translateX(0); }
+  .nms-sidebar-overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 89;
+  }
+  .nms-sidebar.open ~ .nms-sidebar-overlay { display: block; }
+  .nms-hamburger { display: flex; }
+}
+@media (min-width: 769px) {
+  .nms-hamburger { display: none; }
+  .nms-sidebar { transform: none !important; }
+}
+
+/* ── 12. Calendar grid — responsive ─────────────────────────────────────────── */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+@media (max-width: 640px) {
+  .cal-grid { grid-template-columns: repeat(7, minmax(40px, 1fr)); overflow-x: auto; }
+  .cal-day-cell { min-height: 48px; padding: 4px; font-size: 11px; }
+}
+
+/* ── 13. Post form — two-column → single on mobile ──────────────────────────── */
+.post-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .post-form-grid { grid-template-columns: 1fr; }
+}
+
+/* ── 14. Publishing hub — side-by-side → stacked on mobile ──────────────────── */
+.publish-hub-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .publish-hub-layout { grid-template-columns: 1fr; }
+}
+
+/* ── 15. Hamburger button ────────────────────────────────────────────────────── */
+.nms-hamburger {
+  background: none; border: none; cursor: pointer;
+  padding: 8px; border-radius: var(--radius-sm);
+  flex-direction: column; gap: 5px; align-items: center; justify-content: center;
+}
+.nms-hamburger span {
+  display: block; width: 22px; height: 2px;
+  background: var(--ink); border-radius: 2px;
+  transition: all .2s;
+}
