@@ -3698,6 +3698,7 @@ export default function App(){
         setView("project");
       }
       setLoaded(true);
+      const _p=window.location.pathname;const _cm=_p.match(/^\\/client\\/([^\\/]+)/);const _pm=_p.match(/^\\/project\\/([^\\/]+)/);const _vm={'/approvals':'approvals','/calendar':'globalcal','/planner':'planner'};if(_cm&&cs.find(c=>c.id===_cm[1])){setActiveClientId(_cm[1]);setView('client');}else if(_pm&&ps.find(p=>p.id===_pm[1])){setActiveId(_pm[1]);setView('project');}else if(_vm[_p]){setView(_vm[_p]);}
       // Urgency scan — post with date ≤ now+48h still in bozza/revisione
       const now=new Date(); const cutoff=new Date(now.getTime()+48*3600000);
       const urgencyProjects = (d?.projects || projects || []).map(migrateProjectData);
@@ -3728,6 +3729,8 @@ export default function App(){
     return result;
   }
 
+  function pushUrl(view,id){const m={dashboard:'/',approvals:'/approvals',globalcal:'/calendar',planner:'/planner'};const url=m[view]||(view==='client'?'/client/'+id:view==='project'?'/project/'+id:view==='portal'?'/portal/'+id:'/');window.history.pushState({view,id},'',url);}
+
   async function persist(ps,cs,aid){
     setProjects(ps); setClients(cs);
     if(aid!==undefined) setActiveId(aid);
@@ -3738,20 +3741,20 @@ export default function App(){
   async function handleClientUpdate(upd){ const cs=clients.map(c=>c.id===upd.id?upd:c); setClients(cs); await saveWorkspaceState({projects,clients:cs,activeId}); }
 
   function handleSelect(id){
-    setActiveId(id); setView("project");
+    setActiveId(id); setView("project"); pushUrl("project",id);
     const proj=projects.find(p=>p.id===id);
     if(proj?.clientId) setActiveClientId(proj.clientId);
     persist(projects,clients,id);
   }
   function handleBack(){
-    setView("dashboard");
+    setView("dashboard"); pushUrl("dashboard");
     persist(projects,clients,null);
     const _u=new URL(window.location.href);
     _u.searchParams.delete("portal");
     window.history.pushState({},"",_u.toString());
   }
   function toggleExpand(id){ setExpandedClients(ex=>ex.includes(id)?ex.filter(e=>e!==id):[...ex,id]); }
-  function openClient(id){ setActiveClientId(id); setView("client"); }
+  function openClient(id){ setActiveClientId(id); setView("client"); pushUrl("client",id); }
   function openPortal(id){
     setActiveClientId(id);
     setView("portal");
@@ -3919,12 +3922,12 @@ export default function App(){
 
         <div className="sb-bottom">
           <GlobalMetaConnect globalMeta={globalMeta} onMetaChange={handleMetaChange}/>
-          <button className={`sb-planner-btn ${view==="approvals"?"active":""}`} onClick={()=>setView("approvals")} style={{position:"relative"}}>
+          <button className={`sb-planner-btn ${view==="approvals"?"active":""}`} onClick={()=>{ setView("approvals"); pushUrl("approvals"); }} style={{position:"relative"}}>
             ✅ Approvazioni
             {(()=>{ const n=projects.reduce((s,proj)=>{ const ed=proj.ed||{}; const fi=[...(ed.feedItems||[]),...(ed.contentItems||[])]; return s+fi.filter(f=>f.stato==="revisione"||f.stato==="semaforo").length; },0); return n>0?<span style={{position:"absolute",top:4,right:8,background:"var(--err)",color:"#fff",fontSize:9,fontWeight:800,padding:"1px 5px",borderRadius:99,minWidth:16,textAlign:"center"}}>{n}</span>:null; })()}
           </button>
-          <button className={`sb-planner-btn ${view==="globalcal"?"active":""}`} onClick={()=>setView("globalcal")}>📅 Calendario Globale</button>
-          <button className={`sb-planner-btn ${view==="planner"?"active":""}`} onClick={()=>setView("planner")}>🗓️ Team Planner</button>
+          <button className={`sb-planner-btn ${view==="globalcal"?"active":""}`} onClick={()=>{ setView("globalcal"); pushUrl("globalcal"); }}>📅 Calendario Globale</button>
+          <button className={`sb-planner-btn ${view==="planner"?"active":""}`} onClick={()=>{ setView("planner"); pushUrl("planner"); }}>🗓️ Team Planner</button>
         </div>
       </div>
 
@@ -3943,6 +3946,7 @@ export default function App(){
         {view==="client"&&activeClient&&(
           <ModuleErrorBoundary name="Impostazioni Cliente" resetKey={activeClient.id}>
             <ClientSettingsView
+              key={activeClient.id}
               client={activeClient}
               globalMeta={globalMeta}
               projects={projects}
