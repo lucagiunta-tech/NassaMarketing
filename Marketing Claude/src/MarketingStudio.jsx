@@ -545,7 +545,7 @@ function ContenutiView({ project, onUpdate, members, onEdit, onAddNew, globalMet
       )}
 
       {pubPost&&(
-        <PublishModal post={{...pubPost}} meta={globalMeta}
+        <PublishModal post={{...pubPost}} meta={clientMetaForPublish(client, globalMeta)}
           onClose={()=>setPubPost(null)}
           onPublished={()=>{saveItem({...pubPost,stato:"pubblicato"});setPubPost(null);}}/>
       )}
@@ -839,7 +839,7 @@ function EditorialeMain({ project, onUpdate, globalMeta, client=null }) {
 
       {/* PUBLISH MODAL */}
       {pubPost && (
-        <PublishModal post={{ ...pubPost }} meta={globalMeta}
+        <PublishModal post={{ ...pubPost }} meta={clientMetaForPublish(client, globalMeta)}
           onClose={() => setPubPost(null)}
           onPublished={() => { saveItem({ ...pubPost, stato: "pubblicato" }); setPubPost(null); }} />
       )}
@@ -897,7 +897,7 @@ function EditorialeMain({ project, onUpdate, globalMeta, client=null }) {
 
       {/* PUBLISH MODAL */}
       {pubPost && (
-        <PublishModal post={{ ...pubPost }} meta={globalMeta}
+        <PublishModal post={{ ...pubPost }} meta={clientMetaForPublish(client, globalMeta)}
           onClose={() => setPubPost(null)}
           onPublished={() => { saveItem({ ...pubPost, stato: "pubblicato" }); setPubPost(null); }} />
       )}
@@ -958,7 +958,7 @@ function EdSectionContent({project, secId, onUpdate, globalMeta, client=null}){
     <div className="sec-body">
       <div className="sec-body-hdr"><div className="sec-body-title" style={{borderLeft:`3px solid ${gc}`,paddingLeft:12}}>Feed</div></div>
       <div className="sec-content" style={{padding:0,overflow:"hidden",display:"flex",flexDirection:"column"}}>
-        <FeedED project={project} onUpdate={onUpdate} globalMeta={globalMeta}/>
+        <FeedED project={project} onUpdate={onUpdate} globalMeta={globalMeta} client={client}/>
       </div>
     </div>
   );
@@ -972,7 +972,7 @@ function EdSectionContent({project, secId, onUpdate, globalMeta, client=null}){
   if(secId==="publishing") return(
     <div className="sec-body">
       <div className="sec-body-hdr"><div className="sec-body-title" style={{borderLeft:`3px solid ${gc}`,paddingLeft:12}}>{curSec?.label}</div></div>
-      <div className="sec-content"><PublishingHubED project={project} onUpdate={onUpdate} globalMeta={globalMeta}/></div>
+      <div className="sec-content"><PublishingHubED project={project} onUpdate={onUpdate} globalMeta={globalMeta} client={client}/></div>
     </div>
   );
   if(secId==="perf_log") return(
@@ -1664,6 +1664,24 @@ function Toggle({checked, onChange}){
 }
 
 
+// ── Per-client Meta token adapter ─────────────────────────────────────────────
+// Converts client.meta (our storage format) → meta prop expected by PublishModal
+// client.meta: { igUserId, igToken, fbPageId, fbToken, nomePagina, allPages }
+// PublishModal: { ig:{userId,token}, fb:{pageId,token}, allPages, nome }
+function clientMetaForPublish(client, globalMeta) {
+  const cm = client?.meta;
+  if (cm?.fbPageId || cm?.igUserId) {
+    return {
+      ig:       { userId: cm.igUserId || "", token: cm.igToken || "" },
+      fb:       { pageId: cm.fbPageId || "", token: cm.fbToken || "" },
+      allPages: cm.allPages || [],
+      nome:     cm.nomePagina || client?.nome || "",
+    };
+  }
+  return globalMeta || null; // fallback to global if client not connected
+}
+
+
 // ─── CLIENT HELPERS (used by ClientSettingsView) ─────────────────────────────
 const PACCHETTI = [
   {id:"starter",      emoji:"🌱", label:"Starter",      price:490,   desc:"15h/mese · social base"},
@@ -1687,7 +1705,7 @@ function emptyClient(){
     note: "", pacchetto: "professional", dataInizio: "",
     social: {ig:"",fb:"",linkedin:"",tiktok:"",sito:""},
     meta: {igUserId:"",igToken:"",fbPageId:"",fbToken:"",nomePagina:"",allPages:[]},
-    portal: {pin:"",mostraFeed:true,mostraPipeline:true},
+    portal: {pin:"",mostraFeed:true,mostraPipeline:true,mostraInsights:true},
     projectIds: [],
     createdAt: Date.now(),
   };
@@ -1706,7 +1724,7 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
 
   const clientProjects = projects.filter(p=>p.clientId===client.id);
   const slug = clientSlug(client.nome);
-  const portalUrl = `https://nassa-gestione.vercel.app/#/c/${slug}`;
+  const portalUrl = `https://nassa-marketing-edw5.vercel.app/?portal=${slug}`;
   const pacchettoObj = PACCHETTI.find(p=>p.id===f.pacchetto)||PACCHETTI[2];
 
   // Meta page selection from global BM
@@ -1751,7 +1769,15 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
           <div className="cs-card">
             <div className="cs-card-title">📋 Informazioni cliente</div>
             <div className="fg-row">
-              <div className="fg"><label className="lbl">Nome *</label><input className="inp" value={f.nome} onChange={e=>set("nome",e.target.value)}/></div>
+              <div className="fg"><label className="lbl">Nome *</label>
+              <label className="cs-toggle">
+                <div className="cs-toggle-info">
+                  <div className="cs-toggle-label">Mostra Meta Insights</div>
+                  <div className="cs-toggle-desc">Il cliente vede le statistiche Facebook nel portale</div>
+                </div>
+                <input type="checkbox" checked={f.portal?.mostraInsights??true} onChange={e=>setF(p=>({...p,portal:{...(p.portal||{}),mostraInsights:e.target.checked}}))}/>
+                <span className="cs-toggle-slider"/>
+              </label><input className="inp" value={f.nome} onChange={e=>set("nome",e.target.value)}/></div>
               <div className="fg"><label className="lbl">Referente</label><input className="inp" placeholder="Nome cognome" value={f.referente} onChange={e=>set("referente",e.target.value)}/></div>
               <div className="fg"><label className="lbl">Email</label><input className="inp" type="email" placeholder="email@cliente.it" value={f.email} onChange={e=>set("email",e.target.value)}/></div>
             </div>
@@ -2164,7 +2190,7 @@ function ClientPortalPreview({ client, projects, onBack, onUpdateProject }){
         </button>
         <button className={`portal-tab ${portalTab==="insights"?"active":""}`} onClick={()=>setPortalTab("insights")}>
           📈 Meta Insights
-          {!client?.meta?.fbPageId&&<span title="Meta non connessa" style={{marginLeft:4,opacity:.5}}>·</span>}
+          {client?.meta?.fbPageId&&<span style={{marginLeft:4,fontSize:9,color:"#10B981"}}>●</span>}
         </button>
       </div>
 
@@ -2212,7 +2238,9 @@ function ClientPortalPreview({ client, projects, onBack, onUpdateProject }){
       )}
       {portalTab==="insights"&&(
         <div className="portal-body">
-          <MetaInsightsPanel client={client} />
+          {client?.portal?.mostraInsights===false
+            ? <div className="mi-empty"><div style={{fontSize:24}}>🔒</div><div>Statistiche non disponibili per questo portale.</div></div>
+            : <MetaInsightsPanel client={client} />}
           {!client?.meta?.fbPageId&&(
             <div style={{fontSize:12,color:"var(--ink4)",marginTop:-8,textAlign:"center",paddingBottom:16}}>
               Chiedi alla tua agenzia di collegare l&#39;account Meta per visualizzare le statistiche della tua pagina Facebook.
@@ -2464,7 +2492,7 @@ function CaptionTemplateSelector({ project, onUpdate, pilastro, onApply }){
 // PostFormModal estratto in modules/editorial/PostFormModal.jsx
 
 // ─── FEED SECTION ─────────────────────────────────────────────────────────────
-function FeedED({ project, onUpdate, globalMeta }) {
+function FeedED({ project, onUpdate, globalMeta, client=null }) {
   const feedItems = getEditorialPosts(project);
   const [selectedId, setSelectedId] = useState(null);
   const [editItem,   setEditItem]   = useState(null);
@@ -2570,7 +2598,7 @@ function FeedED({ project, onUpdate, globalMeta }) {
       {pubPost&&(
         <PublishModal
           post={{...pubPost}}
-          meta={globalMeta}
+          meta={clientMetaForPublish(client, globalMeta)}
           onClose={()=>setPubPost(null)}
           onPublished={()=>{
             upFeed(ed=>({...ed,feedItems:(ed.feedItems||[]).map(f=>f.id===pubPost.id?{...f,stato:"pubblicato"}:f)}));
