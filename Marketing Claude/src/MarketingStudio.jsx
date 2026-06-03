@@ -1724,7 +1724,7 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
 
   const clientProjects = projects.filter(p=>p.clientId===client.id);
   const slug = clientSlug(client.nome);
-  const portalUrl = `https://nassa-marketing-edw5.vercel.app/?portal=${slug}`;
+  const portalUrl = `https://nassa-marketing-edw5.vercel.app/c/?portal=${slug}`;
   const pacchettoObj = PACCHETTI.find(p=>p.id===f.pacchetto)||PACCHETTI[2];
 
   // Meta page selection from global BM
@@ -2257,7 +2257,7 @@ function ClientPortalPreview({ client, projects, onBack, onUpdateProject }){
       <div className="portal-header">
         <div className="portal-agency">NASSA STUDIO</div>
         <div className="portal-client">{client.nome}</div>
-        <button className="btn-ghost sm" onClick={onBack}>← Torna al pannello</button>
+        {onBack && <button className="btn-ghost sm" onClick={onBack}>← Torna al pannello</button>}
       </div>
 
       {/* PORTAL TABS */}
@@ -3663,7 +3663,8 @@ export default function App(){
         setActiveId(d.activeId||null);
         // Auto-navigate to portal if URL has ?portal= param
         const _urlPortal = new URLSearchParams(window.location.search).get("portal");
-        if(_urlPortal){
+        const _isClientPortalPath = typeof window !== "undefined" && window.location.pathname.startsWith("/c");
+        if(_urlPortal && _isClientPortalPath){
           const _match = cs.find(c=>clientSlug(c.nome)===_urlPortal||c.id===_urlPortal);
           if(_match){ setActiveClientId(_match.id); setView("portal"); }
         }
@@ -3739,8 +3740,9 @@ export default function App(){
     const client = clients.find(c=>c.id===id);
     const slug = client ? clientSlug(client.nome) : id;
     const url = new URL(window.location.href);
-    url.searchParams.set("portal", slug);
-    window.history.pushState({portal: id}, "", url.toString());
+    // Use /c/ path for client portal (separate from agency app URL)
+    const portalUrl2 = `${window.location.origin}/c/?portal=${slug}`;
+    window.history.pushState({portal: id}, "", portalUrl2);
   }
 
   function handleWizardComplete(iv){
@@ -3758,7 +3760,8 @@ export default function App(){
 
   // Standalone portal mode: ?portal=clientSlug → no sidebar, clean client view
   const _pp = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("portal") : null;
-  if(_pp && view === "portal" && activeClient) {
+  const _isClientPath = typeof window !== "undefined" && window.location.pathname.startsWith("/c");
+  if(_pp && view === "portal" && activeClient && _isClientPath) {
     return (
       <div className="portal-standalone">
         <div className="portal-standalone-hdr">
