@@ -1,16 +1,16 @@
 // aiService.js — Claude API wrapper with retry, prompt caching, safe parsing
 
-const DEFAULT_MODEL      = "claude-sonnet-4-5-20251001";
-const DEFAULT_MAX_TOKENS = 1000;
-const RETRY_ATTEMPTS     = 2;
-const RETRY_DELAY_MS     = 1500;
+export const AI_DEFAULT_MODEL      = "claude-sonnet-4-5-20251001";
+export const AI_DEFAULT_MAX_TOKENS = 1000;
+export const AI_DEFAULT_RETRIES     = 2;
+export const AI_RETRY_DELAY_MS     = 1500;
 const API_URL            = "https://api.anthropic.com/v1/messages";
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-function serializeAiError(err) {
+export function serializeAiError(err) {
   if (!err) return "Errore sconosciuto";
   if (typeof err === "string") return err;
   if (err.error?.message) return err.error.message;
@@ -49,9 +49,9 @@ export async function callAiMessages(prompt, opts = {}) {
     throw new Error("Prompt non valido o vuoto.");
   }
 
-  const model     = opts.model      || DEFAULT_MODEL;
-  const maxTokens = opts.maxTokens  || DEFAULT_MAX_TOKENS;
-  const retries   = opts.retries    ?? RETRY_ATTEMPTS;
+  const model     = opts.model      || AI_DEFAULT_MODEL;
+  const maxTokens = opts.maxTokens  || AI_DEFAULT_MAX_TOKENS;
+  const retries   = opts.retries    ?? AI_DEFAULT_RETRIES;
   const fetchFn   = opts.fetchFn    || (typeof fetch !== "undefined" ? fetch : null);
 
   if (!fetchFn) throw new Error("fetch non disponibile in questo ambiente.");
@@ -83,7 +83,7 @@ export async function callAiMessages(prompt, opts = {}) {
 
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt > 0) await sleep(RETRY_DELAY_MS);
+    if (attempt > 0) await sleep(AI_RETRY_DELAY_MS);
     try {
       const res = await fetchFn(API_URL, {
         method: "POST",
@@ -116,7 +116,7 @@ export async function callAiMessages(prompt, opts = {}) {
 /**
  * Simple wrapper — returns parsed text or throws.
  */
-export async function callClaude(prompt, maxTokens = DEFAULT_MAX_TOKENS, systemPrompt) {
+export async function callClaude(prompt, maxTokens = AI_DEFAULT_MAX_TOKENS, systemPrompt) {
   const raw = await callAiMessages(prompt, { maxTokens, systemPrompt });
   return parseAiText(raw);
 }
@@ -124,7 +124,7 @@ export async function callClaude(prompt, maxTokens = DEFAULT_MAX_TOKENS, systemP
 /**
  * Safe wrapper — never throws; returns { ok, text, error }.
  */
-export async function safeCallClaude(prompt, maxTokens = DEFAULT_MAX_TOKENS, systemPrompt) {
+export async function safeCallClaude(prompt, maxTokens = AI_DEFAULT_MAX_TOKENS, systemPrompt) {
   try {
     const text = await callClaude(prompt, maxTokens, systemPrompt);
     return { ok: true, text, error: null };
