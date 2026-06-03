@@ -1,4 +1,4 @@
-// ClientPortal.jsx — Token-gated client-facing portal.
+﻿// ClientPortal.jsx — Token-gated client-facing portal.
 // Route: /c/{clientId}/{token}
 // Shows: pending approvals, funnel view, meta insights.
 // No admin access.
@@ -35,7 +35,8 @@ export default function ClientPortal({ clientId, token }) {
   const [toast,     setToast]     = useState(null);
 
   useEffect(() => {
-    const ws = safeLoadWorkspace();
+    (async () => {
+    const ws = await safeLoadWorkspace();
     if (!ws.ok) { setAuthErr("Impossibile caricare i dati."); return; }
 
     const cl = (ws.clients || []).find((c) => c.id === clientId);
@@ -47,6 +48,7 @@ export default function ClientPortal({ clientId, token }) {
     const clientProjects = (ws.projects || []).filter((p) => p.clientId === clientId);
     setClient(cl);
     setProjects(clientProjects);
+    })();
   }, [clientId, token]);
 
   const pendingPosts = useMemo(() => {
@@ -64,8 +66,8 @@ export default function ClientPortal({ clientId, token }) {
     setTimeout(() => setToast(null), 3000);
   }
 
-  function updatePostStatus(postId, projId, newStato, note = "") {
-    const ws = safeLoadWorkspace();
+  async function updatePostStatus(postId, projId, newStato, note = "") {
+    const ws = await safeLoadWorkspace();
     if (!ws.ok) { showToast("Errore salvataggio", "error"); return; }
 
     const projIdx = (ws.projects || []).findIndex((p) => p.id === projId);
@@ -79,7 +81,7 @@ export default function ClientPortal({ clientId, token }) {
 
     ws.projects[projIdx] = { ...proj, ed: { ...(proj.ed || {}), feedItems: feed } };
 
-    const saved = safeSaveWorkspace(ws);
+    const saved = await safeSaveWorkspace(ws);
     if (!saved.ok) { showToast("Errore durante il salvataggio", "error"); return; }
 
     setProjects(ws.projects.filter((p) => p.clientId === clientId));
