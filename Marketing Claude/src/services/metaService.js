@@ -395,7 +395,7 @@ export async function fbPublish(pageId, token, post, scheduleUnix) {
 export async function fetchPagesFromToken(bmToken) {
   if (!bmToken) return { ok: false, pages: [], error: "Token mancante." };
   try {
-    const url = ${META_API}/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username}&access_token=;
+    const url = `${META_API}/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username}&access_token=${encodeURIComponent(bmToken)}`;
     const response = await metaFetch(url);
     const data = await parseMetaJson(response, "fetchPagesFromToken");
     const pages = (data.data || []).map(p => ({
