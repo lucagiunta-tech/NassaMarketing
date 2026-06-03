@@ -3698,7 +3698,7 @@ export default function App(){
         setView("project");
       }
       setLoaded(true);
-      const _p=window.location.pathname;const _cm=_p.match(/^\\/client\\/([^\\/]+)/);const _pm=_p.match(/^\\/project\\/([^\\/]+)/);const _vm={'/approvals':'approvals','/calendar':'globalcal','/planner':'planner'};if(_cm&&cs.find(c=>c.id===_cm[1])){setActiveClientId(_cm[1]);setView('client');}else if(_pm&&ps.find(p=>p.id===_pm[1])){setActiveId(_pm[1]);setView('project');}else if(_vm[_p]){setView(_vm[_p]);}
+      const _p=window.location.pathname;const _seg=_p.split('/').filter(Boolean);const _cm=_seg[0]==='client'?_seg[1]:null;const _pm=_seg[0]==='project'?_seg[1]:null;const _vm={'/approvals':'approvals','/calendar':'globalcal','/planner':'planner'};if(_cm&&cs.find(c=>c.id===_cm[1])){setActiveClientId(_cm[1]);setView('client');}else if(_pm&&ps.find(p=>p.id===_pm[1])){setActiveId(_pm[1]);setView('project');}else if(_vm[_p]){setView(_vm[_p]);}
       // Urgency scan — post with date ≤ now+48h still in bozza/revisione
       const now=new Date(); const cutoff=new Date(now.getTime()+48*3600000);
       const urgencyProjects = (d?.projects || projects || []).map(migrateProjectData);
