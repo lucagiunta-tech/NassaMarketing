@@ -1,0 +1,1 @@
+export const DR = `REGOLA DATI: Usa SOLO le informazioni presenti nell'input. Per ogni dato non fornito scrivi ⚠️ DA RILEVARE. Non inventare numeri, nomi, competitor o quote. Segnala chiaramente quando un'affermazione è un'ipotesi strategica vs un fatto verificato.`;
