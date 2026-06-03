@@ -1,140 +1,109 @@
 // api/meta-oauth.js
-// Facebook / Meta OAuth callback — runs as a Vercel serverless function.
-// Facebook redirects here after user authorization.
-// Exchanges the code for long-lived page tokens and posts them back
-// to the opener window via postMessage, then closes the popup.
+// Vercel serverless function — Meta OAuth popup callback.
+// Exchanges code → short-lived token → long-lived token → page list.
+// Env vars: META_APP_ID, META_APP_SECRET, META_REDIRECT_URI
 
-const META_APP_ID     = process.env.META_APP_ID;
-const META_APP_SECRET = process.env.META_APP_SECRET;
-const REDIRECT_URI    = "https://nassa-marketing-edw5.vercel.app/api/meta-oauth";
-const GV              = "v19.0";
+const APP_ID       = process.env.META_APP_ID;
+const APP_SECRET   = process.env.META_APP_SECRET;
+const REDIRECT_URI = process.env.META_REDIRECT_URI;
+const ALLOWED_ORIGIN = REDIRECT_URI
+  ? new URL(REDIRECT_URI).origin
+  : "https://nassa-marketing-edw5.vercel.app";
+
+const GRAPH = "https://graph.facebook.com/v19.0";
+
+function html(body) {
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+  <style>
+    body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;
+    min-height:100vh;margin:0;background:#f5f5f5;}
+    .card{background:#fff;border-radius:12px;padding:32px 40px;box-shadow:0 2px 16px rgba(0,0,0,.1);
+    text-align:center;max-width:360px;}
+    .icon{font-size:40px;margin-bottom:12px;}
+    h2{margin:0 0 8px;font-size:18px;color:#111;}
+    p{margin:0;font-size:14px;color:#666;}
+  </style>
+</head><body><div class="card">${body}</div>
+<script>setTimeout(()=>window.close(),2000);</script>
+</body></html>`;
+}
 
 export default async function handler(req, res) {
-  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  const { code, error: oauthError } = req.query;
 
-  const { code, error, error_description } = req.query;
-
-  // User denied or Facebook returned an error
-  if (error) {
-    return res.status(200).send(buildHtml({
-      type:  "META_OAUTH_ERROR",
-      error: error_description || error || "Autorizzazione negata",
-    }));
+  if (oauthError) {
+    res.setHeader("Content-Type", "text/html");
+    res.send(html(`<div class="icon">❌</div><h2>Accesso negato</h2><p>${oauthError}</p>
+      <script>window.opener?.postMessage({type:"META_AUTH_ERROR",error:"${oauthError}"},"${ALLOWED_ORIGIN}");setTimeout(()=>window.close(),2000);</script>`));
+    return;
   }
 
   if (!code) {
-    return res.status(400).send(buildHtml({
-      type:  "META_OAUTH_ERROR",
-      error: "Nessun codice OAuth ricevuto.",
-    }));
+    res.setHeader("Content-Type", "text/html");
+    res.send(html(`<div class="icon">⚠️</div><h2>Codice mancante</h2><p>Parametro code assente.</p>
+      <script>window.opener?.postMessage({type:"META_AUTH_ERROR",error:"missing_code"},"${ALLOWED_ORIGIN}");setTimeout(()=>window.close(),2000);</script>`));
+    return;
   }
 
-  if (!META_APP_ID || !META_APP_SECRET) {
-    return res.status(500).send(buildHtml({
-      type:  "META_OAUTH_ERROR",
-      error: "Configurazione server mancante: META_APP_ID / META_APP_SECRET.",
-    }));
+  if (!APP_ID || !APP_SECRET || !REDIRECT_URI) {
+    res.setHeader("Content-Type", "text/html");
+    res.send(html(`<div class="icon">⚙️</div><h2>Configurazione mancante</h2><p>Env vars META_APP_ID / META_APP_SECRET / META_REDIRECT_URI non configurate.</p>`));
+    return;
   }
 
   try {
-    // Step 1: exchange code → short-lived user access token
-    const tokRes = await fetch(
-      `https://graph.facebook.com/${GV}/oauth/access_token?` +
-      new URLSearchParams({
-        client_id:     META_APP_ID,
-        client_secret: META_APP_SECRET,
-        redirect_uri:  REDIRECT_URI,
-        code,
-      })
+    // 1. Exchange code → short-lived user token
+    const tokenRes = await fetch(
+      `${GRAPH}/oauth/access_token?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&client_secret=${APP_SECRET}&code=${code}`
     );
-    const tokData = await tokRes.json();
-    if (tokData.error) throw new Error(tokData.error.message);
-    const shortToken = tokData.access_token;
+    const tokenData = await tokenRes.json();
+    if (tokenData.error) throw new Error(tokenData.error.message);
+    const shortToken = tokenData.access_token;
 
-    // Step 2: exchange → long-lived user token (valid ~60 days)
-    const llRes = await fetch(
-      `https://graph.facebook.com/${GV}/oauth/access_token?` +
-      new URLSearchParams({
-        grant_type:        "fb_exchange_token",
-        client_id:         META_APP_ID,
-        client_secret:     META_APP_SECRET,
-        fb_exchange_token: shortToken,
-      })
+    // 2. Exchange short-lived → long-lived user token (~60 days)
+    const longRes = await fetch(
+      `${GRAPH}/oauth/access_token?grant_type=fb_exchange_token&client_id=${APP_ID}&client_secret=${APP_SECRET}&fb_exchange_token=${shortToken}`
     );
-    const llData  = await llRes.json();
-    const longToken = llData.access_token || shortToken;
+    const longData = await longRes.json();
+    if (longData.error) throw new Error(longData.error.message);
+    const longToken = longData.access_token;
+    const expiresAt = Date.now() + (longData.expires_in || 5184000) * 1000;
 
-    // Step 3: fetch managed pages + linked Instagram Business accounts
+    // 3. Fetch managed pages (page tokens from long-lived user token never expire)
     const pagesRes = await fetch(
-      `https://graph.facebook.com/${GV}/me/accounts?` +
-      new URLSearchParams({
-        fields:       "id,name,access_token,instagram_business_account{id,name,username}",
-        access_token: longToken,
-      })
+      `${GRAPH}/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${longToken}`
     );
     const pagesData = await pagesRes.json();
     if (pagesData.error) throw new Error(pagesData.error.message);
 
-    // Page tokens derived from a long-lived user token never expire
-    const pages = (pagesData.data || []).map(p => ({
-      id:           p.id,
-      name:         p.name,
-      access_token: p.access_token,
-      instagram_business_account: p.instagram_business_account || null,
+    const pages = (pagesData.data || []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      accessToken: p.access_token,
+      instagram: p.instagram_business_account || null,
     }));
 
-    return res.status(200).send(buildHtml({ type: "META_OAUTH_PAGES", pages }));
+    const payload = {
+      type: "META_AUTH_SUCCESS",
+      longToken,
+      expiresAt,
+      pages,
+    };
 
-  } catch (e) {
-    return res.status(200).send(buildHtml({
-      type:  "META_OAUTH_ERROR",
-      error: e.message || "Errore sconosciuto durante l'autenticazione Meta.",
-    }));
+    res.setHeader("Content-Type", "text/html");
+    res.send(html(`
+      <div class="icon">✅</div>
+      <h2>Connesso!</h2>
+      <p>${pages.length} pagina${pages.length !== 1 ? "/e" : ""} trovata/e.</p>
+      <p style="font-size:12px;margin-top:8px;color:#999;">Questa finestra si chiuderà automaticamente.</p>
+      <script>
+        window.opener?.postMessage(${JSON.stringify(payload)}, "${ALLOWED_ORIGIN}");
+        setTimeout(() => window.close(), 2000);
+      </script>`));
+  } catch (err) {
+    const msg = err.message || "Errore sconosciuto";
+    res.setHeader("Content-Type", "text/html");
+    res.send(html(`<div class="icon">❌</div><h2>Errore OAuth</h2><p>${msg}</p>
+      <script>window.opener?.postMessage({type:"META_AUTH_ERROR",error:${JSON.stringify(msg)}},"${ALLOWED_ORIGIN}");setTimeout(()=>window.close(),2500);</script>`));
   }
-}
-
-// Generates the popup HTML — postMessages to opener then self-closes
-function buildHtml(data) {
-  const isError = data.type === "META_OAUTH_ERROR";
-  const label   = isError
-    ? `❌ ${data.error}`
-    : `✓ ${(data.pages || []).length} pagina/e trovata/e — connessione completata.`;
-
-  return `<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Meta OAuth — Nassa Studio</title>
-  <style>
-    body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;
-      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc}
-    .box{text-align:center;padding:40px 32px;background:#fff;border-radius:16px;
-      box-shadow:0 4px 24px rgba(0,0,0,.08);max-width:360px;width:90%}
-    .icon{font-size:36px;margin-bottom:12px}
-    .msg{font-size:14px;line-height:1.5;color:#6b7280;margin:0 0 8px}
-    .sub{font-size:12px;color:#9ca3af}
-    .brand{margin-top:24px;font-size:11px;color:#9ca3af;letter-spacing:.5px;text-transform:uppercase}
-  </style>
-</head>
-<body>
-  <div class="box">
-    <div class="icon">${isError ? "⚠️" : "🔗"}</div>
-    <p class="msg">${label}</p>
-    <p class="sub">Questa finestra si chiuderà automaticamente…</p>
-    <div class="brand">NASSA STUDIO</div>
-  </div>
-  <script>
-    (function(){
-      var data = ${JSON.stringify(data)};
-      try {
-        if(window.opener && !window.opener.closed){
-          window.opener.postMessage(data, "*");
-        }
-      } catch(e){}
-      setTimeout(function(){ window.close(); }, 1500);
-    })();
-  </script>
-</body>
-</html>`;
 }
