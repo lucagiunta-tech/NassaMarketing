@@ -6,8 +6,8 @@
 import { useState, useEffect, useMemo } from "react";
 import { safeLoadWorkspace, safeSaveWorkspace } from "./services/storageService.js";
 import { validateClientToken } from "./utils/clientAuth.js";
-import MetaInsightsPanel from "./modules/editorial/MetaInsightsPanel.jsx";
-import FunnelViewED from "./modules/editorial/FunnelViewED.jsx";
+import { MetaInsightsPanel } from "./modules/editorial/MetaInsightsPanel.jsx";
+import { FunnelViewED } from "./modules/editorial/FunnelViewED.jsx";
 import { getEditorialPosts } from "./modules/editorial/editorialModel.js";
 
 const TABS = [
