@@ -193,8 +193,8 @@ const GROUPS_ED   = ["Pianificazione","Esecuzione","Monitoraggio"];
 const COLORS_ED   = { Pianificazione:"#00C853", Esecuzione:"#FF6B00", Monitoraggio:"#C800FF" };
 // Global Meta (una connessione Nassa per tutto l'agency) 
 const NMS_META_KEY = "nms-global-meta";
-const loadGlobalMeta  = async () => { try { const r=await window.storage.get(NMS_META_KEY); return r?JSON.parse(r.value):null; } catch { return null; } };
-const saveGlobalMeta  = async m  => { try { await window.storage.set(NMS_META_KEY,JSON.stringify(m)); } catch {} };
+const loadGlobalMeta  = async () => { try { const r=await window.storage?.get(NMS_META_KEY); if(r?.value) return JSON.parse(r.value); } catch {} try { const v=localStorage.getItem(NMS_META_KEY); return v?JSON.parse(v):null; } catch { return null; } };
+const saveGlobalMeta  = async m  => { try { await window.storage?.set(NMS_META_KEY,JSON.stringify(m)); } catch {} try { if(m) localStorage.setItem(NMS_META_KEY,JSON.stringify(m)); else localStorage.removeItem(NMS_META_KEY); } catch {} };
 
 // ─── META & KANBAN CONSTANTS ─────────────────────────────────────────────────
 // ─── DEMO / TEMPLATE DATA ───────────────────────────────────────────────────
