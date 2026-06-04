@@ -1,14 +1,18 @@
-// aiService.js — Claude API wrapper with retry, prompt caching, safe parsing
+// aiService.js — OpenRouter API wrapper with retry and safe parsing
 
-export const AI_DEFAULT_MODEL      = "claude-sonnet-4-5-20251001";
-export const AI_DEFAULT_MAX_TOKENS = 1000;
-export const AI_DEFAULT_RETRIES     = 2;
+export const AI_DEFAULT_MODEL      = "google/gemma-4-31b-it";
+const       AI_FALLBACK_MODEL      = "google/gemma-3-27b-it";
+export const AI_DEFAULT_MAX_TOKENS = 2000;
+export const AI_DEFAULT_RETRIES    = 2;
 export const AI_RETRY_DELAY_MS     = 1500;
-const API_URL            = "https://api.anthropic.com/v1/messages";
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+// Key from Vercel env var VITE_OPENROUTER_API_KEY
+const OPENROUTER_KEY =
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_OPENROUTER_API_KEY) || "";
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 export function serializeAiError(err) {
   if (!err) return "Errore sconosciuto";
@@ -20,110 +24,73 @@ export function serializeAiError(err) {
 
 function parseAiText(raw) {
   if (!raw) return "";
-  // Try JSON parse first (for structured responses), fall back to raw string
   const trimmed = raw.trim();
   if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try { return JSON.parse(trimmed); } catch { /* fall through to raw */ }
+    try { return JSON.parse(trimmed); } catch { /* fall through */ }
   }
-  // Strip markdown code fences if present
   const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/);
-  if (fenced) {
-    try { return JSON.parse(fenced[1]); } catch { return fenced[1]; }
-  }
+  if (fenced) { try { return JSON.parse(fenced[1]); } catch { return fenced[1]; } }
   return raw;
 }
 
 /**
- * Core API call with retry.
+ * Core OpenRouter call with retry + model fallback.
  * @param {string} prompt
- * @param {object} opts
- * @param {string}   [opts.model]
- * @param {number}   [opts.maxTokens]
- * @param {number}   [opts.retries]
- * @param {string}   [opts.systemPrompt]  — cached system context (brand voice, etc.)
- * @param {Function} [opts.fetchFn]
+ * @param {{ model?, maxTokens?, retries?, systemPrompt? }} opts
  * @returns {Promise<string>}
  */
 export async function callAiMessages(prompt, opts = {}) {
-  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
-    throw new Error("Prompt non valido o vuoto.");
-  }
+  if (!prompt?.trim()) throw new Error("Prompt non valido o vuoto.");
 
-  const model     = opts.model      || AI_DEFAULT_MODEL;
   const maxTokens = opts.maxTokens  || AI_DEFAULT_MAX_TOKENS;
   const retries   = opts.retries    ?? AI_DEFAULT_RETRIES;
-  const fetchFn   = opts.fetchFn    || (typeof fetch !== "undefined" ? fetch : null);
+  const models    = [opts.model || AI_DEFAULT_MODEL, AI_FALLBACK_MODEL];
 
-  if (!fetchFn) throw new Error("fetch non disponibile in questo ambiente.");
-
-  const apiKey = typeof window !== "undefined"
-    ? (window.__ANTHROPIC_KEY__ || import.meta?.env?.VITE_ANTHROPIC_API_KEY)
-    : process?.env?.ANTHROPIC_API_KEY;
-
-  if (!apiKey) throw new Error("Chiave API Anthropic non configurata.");
-
-  const messages = [{ role: "user", content: prompt }];
-
-  // Build request body — enable prompt caching on system prompt if provided
-  const body = {
-    model,
-    max_tokens: maxTokens,
-    messages,
-  };
-
-  if (opts.systemPrompt) {
-    body.system = [
-      {
-        type: "text",
-        text: opts.systemPrompt,
-        cache_control: { type: "ephemeral" },
-      },
-    ];
-  }
+  const messages = [];
+  if (opts.systemPrompt) messages.push({ role: "system", content: opts.systemPrompt });
+  messages.push({ role: "user", content: prompt });
 
   let lastError;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    if (attempt > 0) await sleep(AI_RETRY_DELAY_MS);
-    try {
-      const res = await fetchFn(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "anthropic-beta": "prompt-caching-2024-07-31",
-        },
-        body: JSON.stringify(body),
-      });
 
-      const json = await res.json();
+  for (const model of models) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      if (attempt > 0) await sleep(AI_RETRY_DELAY_MS);
+      try {
+        const res = await fetch(OPENROUTER_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${OPENROUTER_KEY}`,
+            "HTTP-Referer": "https://nassa-marketing-edw5.vercel.app",
+            "X-Title": "Nassa Marketing Studio",
+          },
+          body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
+        });
 
-      if (!res.ok) {
-        const msg = json?.error?.message || `HTTP ${res.status}`;
-        throw new Error(msg);
+        const json = await res.json();
+
+        if (!res.ok) {
+          const msg = json?.error?.message || `HTTP ${res.status}`;
+          throw new Error(msg);
+        }
+
+        const text = json?.choices?.[0]?.message?.content ?? "";
+        if (!text && model !== models[models.length - 1]) break; // try fallback
+        return text;
+      } catch (err) {
+        lastError = err;
       }
-
-      const raw = json?.content?.[0]?.text ?? "";
-      return raw;
-    } catch (err) {
-      lastError = err;
     }
   }
 
   throw new Error(serializeAiError(lastError));
 }
 
-/**
- * Simple wrapper — returns parsed text or throws.
- */
 export async function callClaude(prompt, maxTokens = AI_DEFAULT_MAX_TOKENS, systemPrompt) {
   const raw = await callAiMessages(prompt, { maxTokens, systemPrompt });
   return parseAiText(raw);
 }
 
-/**
- * Safe wrapper — never throws; returns { ok, text, error }.
- */
 export async function safeCallClaude(prompt, maxTokens = AI_DEFAULT_MAX_TOKENS, systemPrompt) {
   try {
     const text = await callClaude(prompt, maxTokens, systemPrompt);
