@@ -11,20 +11,20 @@ import { useState, useEffect, useCallback } from "react";
 const METRICS_API = [
   "page_impressions",
   "page_views_total",
-  "page_post_engagements",
+  "page_total_actions",
   "page_fan_adds_unique",
   "page_fan_removes_unique",
-  "page_video_views_3s",
-  "page_new_conversations",
+  "page_video_views",
+  "page_reactions_by_type_total",
 ];
 
 const CARDS = [
   { key: "page_impressions",       label: "Visualizzazioni",  icon: "👁",  color: "#1877F2" },
   { key: "followers_net",          label: "Follower netti",   icon: "👥",  color: "#10B981", derived: true },
   { key: "page_views_total",       label: "Visite pagina",    icon: "🔗",  color: "#6366F1" },
-  { key: "page_post_engagements",  label: "Interazioni",      icon: "❤️",  color: "#EC4899" },
-  { key: "page_video_views_3s",    label: "Video & Reel",     icon: "🎬",  color: "#F59E0B" },
-  { key: "page_new_conversations", label: "Conversazioni",    icon: "💬",  color: "#14B8A6" },
+  { key: "page_total_actions",  label: "Azioni totali",      icon: "❤️",  color: "#EC4899" },
+  { key: "page_video_views",    label: "Video views",     icon: "🎬",  color: "#F59E0B" },
+  { key: "page_reactions_by_type_total", label: "Reazioni",    icon: "💬",  color: "#14B8A6" },
 ];
 
 function fmtNum(n) {
