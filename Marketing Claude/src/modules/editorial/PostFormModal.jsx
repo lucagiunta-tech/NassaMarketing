@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { callClaude } from "../../services/aiService";
 import { CaptionScorer } from "./CaptionScorer";
 import { validatePostFormItem } from "./postValidation";
@@ -413,6 +413,8 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
   const [aiCaption,  setAiCaption]  = useState(false);
   const [dragOver,   setDragOver]   = useState(false);
   const [mediaUrlInput, setMediaUrlInput] = useState("");
+  const fileInputRef = useRef(null);
+  const fileInputChangeRef = useRef(null);
 
   function set(k,v){ setF(p=>({...p,[k]:v})); }
   function togglePiat(id){ const c=f.piattaforme||[]; set("piattaforme",c.includes(id)?c.filter(p=>p!==id):[...c,id]); }
@@ -629,12 +631,18 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
           )}
 
           {/* MEDIA UPLOAD */}
+          {/* Hidden file inputs — triggered via refs for reliable cross-browser click */}
+          <input ref={fileInputRef} type="file" accept="image/*,video/*,application/pdf" multiple={isCarousel}
+            style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")}/>
+          <input ref={fileInputChangeRef} type="file" accept="image/*,video/*,application/pdf"
+            style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")}/>
+
           <div className="pfm-label" style={{marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <span>Media {isCarousel&&carouselMedia.length>0&&`(${carouselMedia.length} elementi)`}</span>
-            <label className="btn-primary sm" style={{cursor:"pointer",fontSize:10,padding:"4px 10px"}}>
+            <button type="button" className="btn-primary sm" style={{fontSize:10,padding:"4px 12px",cursor:"pointer"}}
+              onClick={()=>fileInputRef.current?.click()} disabled={imgLoading}>
               📤 {isCarousel?"Aggiungi file":"Carica file"}
-              <input type="file" accept="image/*,video/*" multiple={isCarousel} style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")} disabled={imgLoading}/>
-            </label>
+            </button>
           </div>
 
           {/* CAROUSEL GALLERY */}
@@ -659,7 +667,7 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
               <div className="pfm-media-preview">
                 <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
                 <div className="pfm-media-overlay">
-                  <label className="pfm-media-change">📤 Cambia<input type="file" accept="image/*,video/*" style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")}/></label>
+                  <button type="button" className="pfm-media-change" onClick={()=>fileInputChangeRef.current?.click()}>📤 Cambia</button>
                   <button className="pfm-media-remove" onClick={()=>{set("immagineBase64","");set("immagineUrl","");}}>✕</button>
                 </div>
               </div>
@@ -671,10 +679,10 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
                 </div>
                 <div style={{fontSize:11,color:"var(--ink5)",marginBottom:14}}>Trascina qui il file oppure</div>
                 <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-                  <label className="btn-outline sm" style={{cursor:"pointer"}}>
+                  <button type="button" className="btn-outline sm" style={{cursor:"pointer"}}
+                    onClick={()=>fileInputRef.current?.click()} disabled={imgLoading}>
                     📤 Carica {isCarousel?"immagini":"media"}
-                    <input type="file" accept="image/*,video/*" multiple={isCarousel} style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")} disabled={imgLoading}/>
-                  </label>
+                  </button>
                   <span style={{fontSize:11,color:"var(--ink5)",alignSelf:"center"}}>o incolla URL</span>
                 </div>
                 <div style={{display:"flex",gap:6,marginTop:10,maxWidth:400,width:"100%"}}>
