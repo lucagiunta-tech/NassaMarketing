@@ -422,7 +422,9 @@ CONTESTO PROGETTO: ${c}`,
 
 // ─── CONTENUTI VIEW ───────────────────────────────────────────────────────────
 function ContenutiView({ project, onUpdate, members, onEdit, onAddNew, globalMeta }) {
-  const [subView, setSubView] = useState("calendario");
+  // Read initial subView from URL
+  const initSubView=(()=>{ const s=window.location.pathname.split('/').filter(Boolean); return s[0]==='project'&&s[2]==='ed'&&s[3]==='contenuti'&&s[4]?s[4]:'calendario'; })();
+  const [subView, setSubView] = useState(initSubView||"calendario");
 
   // Gestisci sub-view state (ex-Pubblica)
   const [filterPiat,     setFilterPiat]     = useState("tutti");
@@ -462,7 +464,7 @@ function ContenutiView({ project, onUpdate, members, onEdit, onAddNew, globalMet
       <div className="contenuti-subnav">
         {CONTENUTI_SUBVIEWS.map(v=>(
           <button key={v.id} className={`contenuti-subtab ${subView===v.id?"active":""}`}
-            onClick={()=>setSubView(v.id)}>
+            onClick={()=>{ setSubView(v.id); const u='/project/'+project.id+'/ed/contenuti/'+v.id; window.history.pushState({},'',u); }}>
             {v.icon} {v.label}
           </button>
         ))}
@@ -661,8 +663,10 @@ const CONTENUTI_SUBVIEWS = [
 const ED_PLAN_SECS    = ["ped","campagne_exec"];
 const ED_MONITOR_SECS = ["funnel","perf_log","monthly_review","strategy_update","cicli"];
 
-function EditorialeMain({ project, onUpdate, globalMeta, client=null }) {
-  const [innerView,  setInnerView]  = useState("home");
+function EditorialeMain({ project, onUpdate, globalMeta, client=null, pushUrl }) {
+  // Read initial innerView from URL
+  const initTab=(()=>{ const s=window.location.pathname.split('/').filter(Boolean); return s[0]==='project'&&s[2]==='ed'&&s[3]?s[3]:'home'; })();
+  const [innerView,  setInnerView]  = useState(initTab||'home');
   const [editItem,   setEditItem]   = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [pubPost,    setPubPost]    = useState(null);
@@ -710,7 +714,7 @@ function EditorialeMain({ project, onUpdate, globalMeta, client=null }) {
         <div className="ed-inner-tabs">
           {ED_INNER_VIEWS.map(v => (
             <button key={v.id} className={`ed-inner-tab ${innerView === v.id ? "active" : ""}`}
-              onClick={() => setInnerView(v.id)}>
+              onClick={() => { setInnerView(v.id); if(pushUrl) pushUrl('project',project.id,{module:'ed',tab:v.id}); }}>
               {v.icon} {v.label}
             </button>
           ))}
@@ -864,7 +868,7 @@ function EditorialeMain({ project, onUpdate, globalMeta, client=null }) {
         <div className="ed-inner-tabs">
           {ED_INNER_VIEWS.map(v => (
             <button key={v.id} className={`ed-inner-tab ${innerView === v.id ? "active" : ""}`}
-              onClick={() => setInnerView(v.id)}>
+              onClick={() => { setInnerView(v.id); if(pushUrl) pushUrl('project',project.id,{module:'ed',tab:v.id}); }}>
               {v.icon} {v.label}
             </button>
           ))}
@@ -3172,8 +3176,10 @@ function ManualWizard({onComplete,onBack}){
 // SectionContent estratto in modules/strategy/StrategicSectionContent.jsx
 
 // ─── PROJECT VIEW ─────────────────────────────────────────────────────────────
-function ProjectView({project, onUpdate, onBack, globalMeta, onPortal, client}){
-  const [module,setModule]=useState("overview"); // overview | pdm | pdc | ed
+function ProjectView({project, onUpdate, onBack, globalMeta, onPortal, client, pushUrl}){
+  // Read initial module from URL
+  const initMod=(()=>{ const s=window.location.pathname.split('/').filter(Boolean); return s[0]==='project'&&s[2]?s[2]:'overview'; })();
+  const [module,setModule]=useState(initMod==='pdm'||initMod==='pdc'||initMod==='ed'?initMod:'overview');
   const sections = module==="pdm" ? SECTIONS_PDM : module==="pdc" ? SECTIONS_PDC : SECTIONS_ED;
   const groups   = module==="pdm" ? GROUPS_PDM   : module==="pdc" ? GROUPS_PDC   : GROUPS_ED;
   const COLORS   = module==="pdm" ? COLORS_PDM   : module==="pdc" ? COLORS_PDC   : COLORS_ED;
@@ -3265,18 +3271,18 @@ function ProjectView({project, onUpdate, onBack, globalMeta, onPortal, client}){
 
       {/* MODULE SWITCHER */}
       <div className="module-sw">
-        <button className={`module-btn ${module==="overview"?"active":""}`} onClick={()=>setModule("overview")}>
+        <button className={`module-btn ${module==="overview"?"active":""}`} onClick={()=>{setModule("overview");pushUrl("project",project.id,{module:"overview"});}}>
           <span className="mb-icon">🏠</span>Overview
         </button>
-        <button className={`module-btn ${module==="pdm"?"active":""}`} onClick={()=>setModule("pdm")}>
+        <button className={`module-btn ${module==="pdm"?"active":""}`} onClick={()=>{setModule("pdm");pushUrl("project",project.id,{module:"pdm"});}}>
           <span className="mb-icon">📊</span>Piano di Marketing
           <span className="mb-badge" style={module==="pdm"?{background:"#EFF8FF",color:"#0EA5E9"}:{}}>{pdmFilled}/{SECTIONS_PDM.length}</span>
         </button>
-        <button className={`module-btn ${module==="pdc"?"active":""}`} onClick={()=>setModule("pdc")}>
+        <button className={`module-btn ${module==="pdc"?"active":""}`} onClick={()=>{setModule("pdc");pushUrl("project",project.id,{module:"pdc"});}}>
           <span className="mb-icon">📣</span>Piano di Comunicazione
           <span className="mb-badge" style={module==="pdc"?{background:"#F5F3FF",color:"#8B5CF6"}:{}}>{pdcFilled}/{SECTIONS_PDC.length}</span>
         </button>
-        <button className={`module-btn ${module==="ed"?"active":""}`} onClick={()=>setModule("ed")}>
+        <button className={`module-btn ${module==="ed"?"active":""}`} onClick={()=>{setModule("ed");pushUrl("project",project.id,{module:"ed"});}}>
           <span className="mb-icon">✏️</span>Editoriale
           <span className="mb-badge" style={module==="ed"?{background:"#ECFDF5",color:"#10B981"}:{}}>{edFilled}/{SECTIONS_ED.filter(s=>!ED_SPECIAL.includes(s.id)).length}</span>
         </button>
@@ -3292,7 +3298,7 @@ function ProjectView({project, onUpdate, onBack, globalMeta, onPortal, client}){
       {/* EDITORIALE MAIN — Loomly-style, gestione interna propria */}
       {module==="ed"&&(
         <ModuleErrorBoundary name="Editoriale" resetKey={project.id+"-ed"}>
-          <EditorialeMain project={project} onUpdate={onUpdate} globalMeta={globalMeta} client={client}/>
+          <EditorialeMain project={project} onUpdate={onUpdate} globalMeta={globalMeta} client={client} pushUrl={pushUrl}/>
         </ModuleErrorBoundary>
       )}
 
@@ -3692,7 +3698,17 @@ export default function App(){
         setView("project");
       }
       setLoaded(true);
-      const _p=window.location.pathname;const _seg=_p.split('/').filter(Boolean);const _cm=_seg[0]==='client'?_seg[1]:null;const _pm=_seg[0]==='project'?_seg[1]:null;const _vm={'/approvals':'approvals','/calendar':'globalcal','/planner':'planner'};if(_cm&&cs.find(c=>c.id===_cm[1])){setActiveClientId(_cm[1]);setView('client');}else if(_pm&&ps.find(p=>p.id===_pm[1])){setActiveId(_pm[1]);setView('project');}else if(_vm[_p]){setView(_vm[_p]);}
+      // Parse URL on initial load
+      const initUrl=parseCurrentUrl();
+      if(initUrl.view==='approvals'||initUrl.view==='globalcal'||initUrl.view==='planner'){
+        setView(initUrl.view);
+      } else if(initUrl.view==='client'&&initUrl.id&&cs.find(c=>c.id===initUrl.id)){
+        setActiveClientId(initUrl.id); setView('client');
+      } else if(initUrl.view==='project'&&initUrl.id&&ps.find(p=>p.id===initUrl.id)){
+        setActiveId(initUrl.id); setView('project');
+        const pr=ps.find(p=>p.id===initUrl.id);
+        if(pr?.clientId) setActiveClientId(pr.clientId);
+      }
       // Urgency scan — post with date ≤ now+48h still in bozza/revisione
       const now=new Date(); const cutoff=new Date(now.getTime()+48*3600000);
       const urgencyProjects = (d?.projects || projects || []).map(migrateProjectData);
@@ -3723,7 +3739,54 @@ export default function App(){
     return result;
   }
 
-  function pushUrl(view,id){const m={dashboard:'/',approvals:'/approvals',globalcal:'/calendar',planner:'/planner'};const url=m[view]||(view==='client'?'/client/'+id:view==='project'?'/project/'+id:view==='portal'?'/portal/'+id:'/');window.history.pushState({view,id},'',url);}
+  // ── URL ROUTING ─────────────────────────────────────────────────────────
+  function pushUrl(v,id,extra={}){
+    let url='/';
+    if(v==='approvals') url='/approvals';
+    else if(v==='globalcal') url='/calendar';
+    else if(v==='planner') url='/planner';
+    else if(v==='client') url='/client/'+(id||'');
+    else if(v==='portal') url='/portal/'+(id||'');
+    else if(v==='project'){
+      url='/project/'+(id||'');
+      if(extra.module && extra.module!=='overview') url+='/'+extra.module;
+      if(extra.tab) url+='/'+extra.tab;
+      if(extra.subTab) url+='/'+extra.subTab;
+    }
+    window.history.pushState({view:v,id,...extra},'',url);
+  }
+  function parseCurrentUrl(){
+    const seg=window.location.pathname.split('/').filter(Boolean);
+    const result={view:'dashboard',id:null,module:null,tab:null,subTab:null};
+    if(!seg.length) return result;
+    if(seg[0]==='approvals') return {...result,view:'approvals'};
+    if(seg[0]==='calendar') return {...result,view:'globalcal'};
+    if(seg[0]==='planner') return {...result,view:'planner'};
+    if(seg[0]==='client'&&seg[1]) return {...result,view:'client',id:seg[1]};
+    if(seg[0]==='portal'&&seg[1]) return {...result,view:'portal',id:seg[1]};
+    if(seg[0]==='project'&&seg[1]){
+      result.view='project'; result.id=seg[1];
+      if(seg[2]) result.module=seg[2]; // pdm, pdc, ed
+      if(seg[3]) result.tab=seg[3];    // contenuti, kanban, publishing, etc.
+      if(seg[4]) result.subTab=seg[4]; // calendario, lista, feed, gestisci
+      return result;
+    }
+    return result;
+  }
+  // Listen for browser back/forward
+  useEffect(()=>{
+    function onPopState(){
+      const s=parseCurrentUrl();
+      setView(s.view);
+      if(s.id){
+        if(s.view==='project') { setActiveId(s.id); const pr=projects.find(p=>p.id===s.id); if(pr?.clientId) setActiveClientId(pr.clientId); }
+        if(s.view==='client') setActiveClientId(s.id);
+      }
+      // Module/tab/subTab are handled by ProjectView/EditorialeMain via URL reading
+    }
+    window.addEventListener('popstate',onPopState);
+    return ()=>window.removeEventListener('popstate',onPopState);
+  },[projects]);
 
   async function persist(ps,cs,aid){
     setProjects(ps); setClients(cs);
@@ -3735,7 +3798,7 @@ export default function App(){
   async function handleClientUpdate(upd){ const cs=clients.map(c=>c.id===upd.id?upd:c); setClients(cs); await saveWorkspaceState({projects,clients:cs,activeId}); }
 
   function handleSelect(id){
-    setActiveId(id); setView("project"); pushUrl("project",id);
+    setActiveId(id); setView("project"); pushUrl("project",id,{module:'overview'});
     const proj=projects.find(p=>p.id===id);
     if(proj?.clientId) setActiveClientId(proj.clientId);
     persist(projects,clients,id);
@@ -3766,10 +3829,10 @@ export default function App(){
     const proj={id:uid(),clientId:activeClientId||null,name,createdAt:Date.now(),interview:iv,context:buildCtx(iv),pdm:{sections:{}},pdc:{sections:{}},pilastri:[],ed:createEmptyEditorialState(),tasks:[],milestones:[],budget:{produzione:[],ads:{linkedin:0,google:0,meta:0,altri:0},note:""},qbrs:[],creators:[]};
     const ps=[...projects,proj];
     const cs=clients.map(c=>c.id===activeClientId?{...c,projectIds:[...(c.projectIds||[]),proj.id]}:c);
-    persist(ps,cs,proj.id); setActiveId(proj.id); setView("project");
+    persist(ps,cs,proj.id); setActiveId(proj.id); setView("project"); pushUrl("project",proj.id,{module:'overview'});
   }
-  function addProjectToClient(cid){ setActiveClientId(cid); setView("wizard"); }
-  function addNewClient(){ const c=emptyClient(); const cs=[...clients,c]; setClients(cs); saveWorkspaceState({projects,clients:cs,activeId}); setActiveClientId(c.id); setExpandedClients(ex=>[...ex,c.id]); setView("client"); }
+  function addProjectToClient(cid){ setActiveClientId(cid); setView("wizard"); pushUrl("client",cid); }
+  function addNewClient(){ const c=emptyClient(); const cs=[...clients,c]; setClients(cs); saveWorkspaceState({projects,clients:cs,activeId}); setActiveClientId(c.id); setExpandedClients(ex=>[...ex,c.id]); setView("client"); pushUrl("client",c.id); }
 
   const activeProj   = projects.find(p=>p.id===activeId);
   const activeClient = clients.find(c=>c.id===activeClientId);
@@ -3851,7 +3914,7 @@ export default function App(){
                   setActiveClientId(cid);
                   setExpandedClients(ex=>ex.includes(cid)?ex:[...ex,cid]);
                   const firstProj=projects.find(p=>p.clientId===cid);
-                  if(firstProj){ setActiveId(firstProj.id); setView("project"); }
+                  if(firstProj){ setActiveId(firstProj.id); setView("project"); pushUrl("project",firstProj.id,{module:'overview'}); }
                   else { setView("client"); }
                 }}>
                 <option value="">— Brand attivo —</option>
@@ -4004,7 +4067,7 @@ export default function App(){
         )}
         {view==="project"&&activeProj&&(
           <ModuleErrorBoundary name="Progetto" resetKey={activeProj.id}>
-            <ProjectView project={activeProj} onUpdate={handleUpdate} onBack={handleBack} globalMeta={globalMeta} onPortal={()=>openPortal(activeProj.clientId)} client={clients.find(c=>c.id===activeProj.clientId)}/>
+            <ProjectView project={activeProj} onUpdate={handleUpdate} onBack={handleBack} globalMeta={globalMeta} onPortal={()=>openPortal(activeProj.clientId)} client={clients.find(c=>c.id===activeProj.clientId)} pushUrl={pushUrl}/>
           </ModuleErrorBoundary>
         )}
       </div>
