@@ -347,6 +347,71 @@ export async function igPublish(igUserId, token, post, scheduleUnix) {
   return parseMetaJson(publishResponse, "IG publish");
 }
 
+// ─── INSTAGRAM CAROUSEL PUBLISH ───────────────────────────────────────────────
+
+/**
+ * Publish an Instagram carousel (2-10 images/videos).
+ * Flow: create N child containers → create carousel container → publish.
+ *
+ * @param {string} igUserId
+ * @param {string} token
+ * @param {object} post        - must have post.mediaUrls (array of URLs) and post.caption
+ * @param {number|null} scheduleUnix
+ */
+export async function igCarouselPublish(igUserId, token, post, scheduleUnix) {
+  const mediaUrls = post.mediaUrls || post.immagini || [];
+  if (mediaUrls.length < 2) {
+    throw new MetaApiError("Carousel richiede almeno 2 immagini.", 0, "ValidationError");
+  }
+  if (mediaUrls.length > 10) {
+    throw new MetaApiError("Carousel supporta massimo 10 elementi.", 0, "ValidationError");
+  }
+
+  // Step 1: Create child containers
+  const childIds = [];
+  for (const url of mediaUrls) {
+    const isVideo = /\.(mp4|mov|avi|webm)$/i.test(url);
+    const body = {
+      ...(isVideo ? { media_type: "VIDEO", video_url: url } : { image_url: url }),
+      is_carousel_item: true,
+      access_token: token,
+    };
+    const response = await metaFetch(`${META_API}/${igUserId}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await parseMetaJson(response, `IG carousel child ${childIds.length + 1}`);
+    childIds.push(data.id);
+
+    // If video child, wait for processing
+    if (isVideo) await pollIgMedia(data.id, token);
+  }
+
+  // Step 2: Create carousel container
+  const carouselBody = {
+    media_type: "CAROUSEL",
+    children: childIds.join(","),
+    caption: post.caption || "",
+    access_token: token,
+    ...(scheduleUnix ? { scheduled_publish_time: scheduleUnix } : {}),
+  };
+  const carouselResponse = await metaFetch(`${META_API}/${igUserId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(carouselBody),
+  });
+  const carouselData = await parseMetaJson(carouselResponse, "IG carousel create");
+
+  // Step 3: Publish
+  const publishResponse = await metaFetch(`${META_API}/${igUserId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ creation_id: carouselData.id, access_token: token }),
+  });
+  return parseMetaJson(publishResponse, "IG carousel publish");
+}
+
 // ─── FACEBOOK PUBLISH ─────────────────────────────────────────────────────────
 
 export async function fbPublish(pageId, token, post, scheduleUnix) {
@@ -382,6 +447,55 @@ export async function fbPublish(pageId, token, post, scheduleUnix) {
   return parseMetaJson(response, "Facebook publish");
 }
 
+// ─── FACEBOOK CAROUSEL PUBLISH ────────────────────────────────────────────────
+
+/**
+ * Publish a Facebook multi-photo post.
+ * Flow: upload each photo unpublished → create post with attached_media.
+ *
+ * @param {string} pageId
+ * @param {string} token
+ * @param {object} post        - must have post.mediaUrls (array of image URLs) and post.caption
+ * @param {number|null} scheduleUnix
+ */
+export async function fbCarouselPublish(pageId, token, post, scheduleUnix) {
+  const mediaUrls = post.mediaUrls || post.immagini || [];
+  if (mediaUrls.length < 2) {
+    throw new MetaApiError("Multi-foto richiede almeno 2 immagini.", 0, "ValidationError");
+  }
+
+  // Step 1: Upload each photo as unpublished
+  const photoIds = [];
+  for (const url of mediaUrls) {
+    const response = await metaFetch(`${META_API}/${pageId}/photos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url,
+        published: false,
+        access_token: token,
+      }),
+    });
+    const data = await parseMetaJson(response, `FB photo upload ${photoIds.length + 1}`);
+    photoIds.push(data.id);
+  }
+
+  // Step 2: Create the multi-photo post
+  const feedBody = {
+    message: post.caption || "",
+    attached_media: photoIds.map(id => ({ media_fbid: id })),
+    access_token: token,
+    ...(scheduleUnix
+      ? { published: false, scheduled_publish_time: scheduleUnix }
+      : { published: true }),
+  };
+  const feedResponse = await metaFetch(`${META_API}/${pageId}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(feedBody),
+  });
+  return parseMetaJson(feedResponse, "FB multi-photo publish");
+}
 
 // ─── FETCH PAGES FROM TOKEN ────────────────────────────────────────────────────
 
@@ -410,6 +524,55 @@ export async function fetchPagesFromToken(bmToken) {
     return { ok: false, pages: [], error: serializeMetaError(err) };
   }
 }
+
+// ─── CLIENT TOKEN RESOLUTION ──────────────────────────────────────────────────
+
+/**
+ * Resolve the freshest tokens for a client by looking up their page IDs
+ * in the global allPages pool. This prevents stale token copies.
+ *
+ * @param {object} clientMeta  - client.meta: { fbPageId, igUserId, pageName }
+ * @param {object} globalMeta  - globalMeta: { allPages, bmToken, ... }
+ * @returns {{ ig: {userId,token}, fb: {pageId,token} } | null}
+ */
+export function resolveClientTokens(clientMeta, globalMeta) {
+  if (!clientMeta?.fbPageId && !clientMeta?.igUserId) return null;
+
+  const allPages = globalMeta?.allPages || [];
+  const page = allPages.find(p => p.id === clientMeta.fbPageId);
+
+  // Use fresh token from global pool, fallback to client-stored token (legacy)
+  const freshToken = page?.token || clientMeta?.fbToken || clientMeta?.igToken || "";
+
+  const fb = clientMeta.fbPageId
+    ? { pageId: clientMeta.fbPageId, token: freshToken }
+    : { pageId: "", token: "" };
+
+  const ig = clientMeta.igUserId
+    ? { userId: clientMeta.igUserId, token: page?.token || clientMeta?.igToken || freshToken }
+    : { userId: "", token: "" };
+
+  return {
+    ig,
+    fb,
+    nome: clientMeta.pageName || clientMeta.nomePagina || "",
+    allPages,
+  };
+}
+
+/**
+ * Migrate legacy client.meta (with token copies) to new shape (IDs only).
+ * Safe to call multiple times — idempotent.
+ */
+export function migrateClientMeta(clientMeta) {
+  if (!clientMeta) return { fbPageId: "", igUserId: "", pageName: "" };
+  return {
+    fbPageId: clientMeta.fbPageId || "",
+    igUserId: clientMeta.igUserId || "",
+    pageName: clientMeta.pageName || clientMeta.nomePagina || "",
+  };
+}
+
 // ─── SAFE WRAPPERS ────────────────────────────────────────────────────────────
 
 export async function safeIgPublish(...args) {
@@ -428,6 +591,32 @@ export async function safeIgPublish(...args) {
 export async function safeFbPublish(...args) {
   try {
     return { ok: true, data: await fbPublish(...args), error: null, tokenExpired: false };
+  } catch (error) {
+    return {
+      ok: false,
+      data: null,
+      error: serializeMetaError(error),
+      tokenExpired: isTokenExpiredError(error),
+    };
+  }
+}
+
+export async function safeIgCarouselPublish(...args) {
+  try {
+    return { ok: true, data: await igCarouselPublish(...args), error: null, tokenExpired: false };
+  } catch (error) {
+    return {
+      ok: false,
+      data: null,
+      error: serializeMetaError(error),
+      tokenExpired: isTokenExpiredError(error),
+    };
+  }
+}
+
+export async function safeFbCarouselPublish(...args) {
+  try {
+    return { ok: true, data: await fbCarouselPublish(...args), error: null, tokenExpired: false };
   } catch (error) {
     return {
       ok: false,

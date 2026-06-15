@@ -12,6 +12,7 @@ import {
   buildModulePresentationSlides,
   buildSectionPresentationHTML,
 } from "./services";
+import { resolveClientTokens, migrateClientMeta } from "./services/metaService";
 
 import {
   FeedPreviewGrid,
@@ -1675,20 +1676,13 @@ function Toggle({checked, onChange}){
 
 
 // ── Per-client Meta token adapter ─────────────────────────────────────────────
-// Converts client.meta (our storage format) → meta prop expected by PublishModal
-// client.meta: { igUserId, igToken, fbPageId, fbToken, nomePagina, allPages }
-// PublishModal: { ig:{userId,token}, fb:{pageId,token}, allPages, nome }
+// Clients store only page IDs (fbPageId, igUserId, pageName).
+// Tokens are resolved at publish time from globalMeta.allPages — always fresh.
+// NEVER falls back to globalMeta if client is unconfigured.
 function clientMetaForPublish(client, globalMeta) {
   const cm = client?.meta;
-  if (cm?.fbPageId || cm?.igUserId) {
-    return {
-      ig:       { userId: cm.igUserId || "", token: cm.igToken || "" },
-      fb:       { pageId: cm.fbPageId || "", token: cm.fbToken || "" },
-      allPages: cm.allPages || [],
-      nome:     cm.nomePagina || client?.nome || "",
-    };
-  }
-  return globalMeta || null; // fallback to global if client not connected
+  if (!cm?.fbPageId && !cm?.igUserId) return null; // unconfigured → no publishing
+  return resolveClientTokens(cm, globalMeta);
 }
 
 
@@ -1714,7 +1708,7 @@ function emptyClient(){
     nome: "Nuovo Cliente", settore: "", sito: "", referente: "", email: "", telefono: "",
     note: "", pacchetto: "professional", dataInizio: "",
     social: {ig:"",fb:"",linkedin:"",tiktok:"",sito:""},
-    meta: {igUserId:"",igToken:"",fbPageId:"",fbToken:"",nomePagina:"",allPages:[]},
+    meta: {fbPageId:"",igUserId:"",pageName:""},
     portal: {pin:"",mostraFeed:true,mostraPipeline:true,mostraInsights:true},
     projectIds: [],
     createdAt: Date.now(),
@@ -1744,10 +1738,11 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
   function selectMetaPage(pageId, tipo){
     const pg = clientPages.find(p=>p.id===pageId) || allPages.find(p=>p.id===pageId);
     if(!pg) return;
+    // Store only IDs + name — tokens resolved at publish time from globalMeta.allPages
     if(tipo==="ig"){
-      setMeta({...(f.meta||{}), igUserId:pg.igId||"", igToken:pg.token, nomePagina:pg.nome});
+      setMeta({...(f.meta||{}), igUserId:pg.igId||"", pageName:pg.nome});
     } else {
-      setMeta({...(f.meta||{}), fbPageId:pg.id, fbToken:pg.token, nomePagina:pg.nome});
+      setMeta({...(f.meta||{}), fbPageId:pg.id, igUserId:pg.igId||"", pageName:pg.nome});
     }
     // Auto-save so changes persist immediately
     setTimeout(()=>{ onUpdate({...f, meta:{...f.meta}}); }, 100);
@@ -1864,10 +1859,9 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
                     const igAcc = page.igId ? {id:page.igId, name:page.nome} : null;
                     return(
                       <button key={page.id} className="meta-page-row"
-                        onClick={()=>{
+                      onClick={()=>{
                           const u={...(f.meta||{}),
-                            fbPageId:page.id, fbToken:page.token, nomePagina:page.nome,
-                            igUserId:page.igId||"", igToken:page.igId?page.token:"",
+                            fbPageId:page.id, igUserId:page.igId||"", pageName:page.nome,
                           };
                           setMeta(u);
                           setTimeout(()=>onUpdate({...f,meta:u}),50);
@@ -1900,7 +1894,7 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
                     Instagram {f.meta?.igUserId&&<span className="meta-conn-badge">✓ Connesso</span>}
                   </div>
                   {f.meta?.igUserId
-                    ?<><div className="meta-plat-val">@{f.meta.nomePagina}</div></>
+                    ?<><div className="meta-plat-val">@{f.meta.pageName || f.meta.nomePagina}</div></>
                     :<div style={{fontSize:11,color:"#F59E0B"}}>⚠️ Nessun account IG Business collegato a questa pagina</div>
                   }
                 </div>
@@ -1909,9 +1903,9 @@ function ClientSettingsView({ client, globalMeta, projects, onUpdate, onAddProje
                     <span className="social-badge" style={{background:"#1877F2"}}>FB</span>
                     Facebook <span className="meta-conn-badge">✓ Connesso</span>
                   </div>
-                  <div className="meta-plat-val">{f.meta.nomePagina}</div>
+                  <div className="meta-plat-val">{f.meta.pageName || f.meta.nomePagina}</div>
                   <button className="btn-ghost sm" style={{marginTop:6}} onClick={()=>{
-                    const u={...(f.meta||{}),fbPageId:"",fbToken:"",igUserId:"",igToken:"",nomePagina:""};
+                    const u={...(f.meta||{}),fbPageId:"",igUserId:"",pageName:""};
                     setMeta(u);
                     setTimeout(()=>onUpdate({...f,meta:u}),50);
                   }}>🔄 Cambia pagina</button>
@@ -3921,7 +3915,7 @@ export default function App(){
         </div>
 
         <div className="sb-bottom">
-          <GlobalMetaConnect globalMeta={globalMeta} onMetaChange={handleMetaChange}/>
+          <GlobalMetaConnect globalMeta={globalMeta} onMetaChange={handleMetaChange} clients={clients}/>
           <button className={`sb-planner-btn ${view==="approvals"?"active":""}`} onClick={()=>{ setView("approvals"); pushUrl("approvals"); }} style={{position:"relative"}}>
             ✅ Approvazioni
             {(()=>{ const n=projects.reduce((s,proj)=>{ const ed=proj.ed||{}; const fi=[...(ed.feedItems||[]),...(ed.contentItems||[])]; return s+fi.filter(f=>f.stato==="revisione"||f.stato==="semaforo").length; },0); return n>0?<span style={{position:"absolute",top:4,right:8,background:"var(--err)",color:"#fff",fontSize:9,fontWeight:800,padding:"1px 5px",borderRadius:99,minWidth:16,textAlign:"center"}}>{n}</span>:null; })()}

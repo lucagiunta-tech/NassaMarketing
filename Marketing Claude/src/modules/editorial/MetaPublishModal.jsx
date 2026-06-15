@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { igPublish, fbPublish, isTokenExpiredError, serializeMetaError } from "../../services/metaService";
+import { igPublish, fbPublish, igCarouselPublish, fbCarouselPublish, isTokenExpiredError, serializeMetaError } from "../../services/metaService";
 
 // ─── BEST TIME DATA ───────────────────────────────────────────────────────────
 // Basato su ricerche Sprout Social / Later / HubSpot 2024-2025
@@ -125,6 +125,7 @@ function BestTimePanel({ platforms, currentDate, onApply, onClose }) {
 export function PublishModal({ post, meta, onClose, onPublished }) {
   const igOk = meta?.ig?.userId && meta?.ig?.token;
   const fbOk = meta?.fb?.pageId && meta?.fb?.token;
+  const noAccount = !igOk && !fbOk;
 
   const [mode,      setMode]      = useState("ora");
   const [selIG,     setSelIG]     = useState(!!igOk);
@@ -140,7 +141,13 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
   const [btpApplied, setBtpApplied] = useState(false);
 
   const postTitle = post.title || post.titolo || "Contenuto";
-  const isReel    = (post.tipo || post.format || "").toLowerCase() === "reel";
+  const tipo      = (post.tipo || post.format || "").toLowerCase();
+  const isReel    = tipo === "reel";
+  const isCarousel = tipo === "carousel" || tipo === "carosello";
+
+  // Media URLs for carousel
+  const mediaUrls = post.mediaUrls || post.immagini || [];
+  const carouselReady = isCarousel && mediaUrls.length >= 2;
 
   // Piattaforme selezionate (per BestTimePanel)
   const selectedPlatforms = [
@@ -161,13 +168,19 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
   }, []);
 
   async function publish() {
-    if (!igOk && !fbOk) return;
+    if (noAccount) return;
     setStatus("publishing");
     const out = [];
+
+    // ── Instagram ──
     if (igOk && selIG) {
       try {
         if (isReel) setVideoWait(true);
-        await igPublish(meta.ig.userId, meta.ig.token, post, schedUnix);
+        if (isCarousel) {
+          await igCarouselPublish(meta.ig.userId, meta.ig.token, post, schedUnix);
+        } else {
+          await igPublish(meta.ig.userId, meta.ig.token, post, schedUnix);
+        }
         setVideoWait(false);
         out.push({ platform: "Instagram", ok: true });
       } catch (e) {
@@ -175,14 +188,21 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
         out.push({ platform: "Instagram", ok: false, msg: serializeMetaError(e), tokenExpired: isTokenExpiredError(e) });
       }
     }
+
+    // ── Facebook ──
     if (fbOk && selFB) {
       try {
-        await fbPublish(meta.fb.pageId, meta.fb.token, post, schedUnix);
+        if (isCarousel) {
+          await fbCarouselPublish(meta.fb.pageId, meta.fb.token, post, schedUnix);
+        } else {
+          await fbPublish(meta.fb.pageId, meta.fb.token, post, schedUnix);
+        }
         out.push({ platform: "Facebook", ok: true });
       } catch (e) {
         out.push({ platform: "Facebook", ok: false, msg: serializeMetaError(e), tokenExpired: isTokenExpiredError(e) });
       }
     }
+
     setResults(out);
     const anyOk = out.some(r => r.ok);
     setStatus(anyOk ? "success" : "error");
@@ -205,8 +225,20 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
         <div className="modal-body">
           {/* IDLE */}
           {status === "idle" && (<>
-            {!igOk && !fbOk && (
-              <div className="pub-warn">Nessun account Meta connesso. Connetti nella sezione Publishing Hub.</div>
+            {/* NO ACCOUNT CONNECTED */}
+            {noAccount && (
+              <div style={{ textAlign: "center", padding: "20px 0" }}>
+                <div style={{ fontSize: 36, marginBottom: 12 }}>🔗</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 8, color: "var(--ink)" }}>
+                  Nessun account Meta connesso
+                </div>
+                <div style={{ fontSize: 12, color: "var(--ink4)", lineHeight: 1.5, maxWidth: 280, margin: "0 auto" }}>
+                  Vai in <strong>Impostazioni cliente → Social & Meta</strong> e seleziona la pagina Facebook/Instagram per questo cliente.
+                </div>
+                <div style={{ fontSize: 11, color: "var(--ink5)", marginTop: 12 }}>
+                  Assicurati di aver prima connesso il token Business Manager dalla sidebar.
+                </div>
+              </div>
             )}
 
             {(igOk || fbOk) && (<>
@@ -223,6 +255,21 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
                   </label>
                 )}
               </div>
+
+              {/* CAROUSEL INFO */}
+              {isCarousel && (
+                <div style={{ marginTop: 8, padding: "8px 12px", background: "rgba(0,110,255,.06)", borderRadius: "var(--r)", fontSize: 12, color: "var(--gold)", border: "1px solid rgba(0,110,255,.15)", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>🖼️</span>
+                  <div>
+                    <div style={{ fontWeight: 700 }}>Carousel — {mediaUrls.length} {mediaUrls.length === 1 ? "elemento" : "elementi"}</div>
+                    {mediaUrls.length < 2 && (
+                      <div style={{ fontSize: 11, color: "var(--err)", marginTop: 2 }}>
+                        ⚠️ Servono almeno 2 immagini per un carousel. Aggiungi media nel post.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* MODE SWITCH */}
               <div className="pub-mode">
@@ -306,7 +353,9 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
             <div style={{ textAlign: "center", padding: "28px 0" }}>
               <div className="spin" style={{ margin: "0 auto 14px", width: 32, height: 32, borderWidth: 3 }}/>
               <div style={{ fontWeight: 700 }}>
-                {videoWait ? "Elaborazione video (1-2 min)…" : "Pubblicazione…"}
+                {videoWait ? "Elaborazione video (1-2 min)…"
+                  : isCarousel ? `Pubblicazione carousel (${mediaUrls.length} elementi)…`
+                  : "Pubblicazione…"}
               </div>
               <div style={{ fontSize: 11, color: "var(--ink4)", marginTop: 6 }}>
                 {mode === "pianifica"
@@ -356,11 +405,14 @@ export function PublishModal({ post, meta, onClose, onPublished }) {
         </div>
 
         {/* FOOTER */}
-        {status === "idle" && (igOk || fbOk) && (
+        {status === "idle" && !noAccount && (
           <div className="modal-foot">
             <button className="btn-ghost sm" onClick={onClose}>Annulla</button>
-            <button className="btn-primary sm" onClick={publish} disabled={!selIG && !selFB}>
-              {mode === "pianifica" ? "📅 Pianifica" : "📤 Pubblica ora"}
+            <button className="btn-primary sm" onClick={publish}
+              disabled={(!selIG && !selFB) || (isCarousel && !carouselReady)}>
+              {isCarousel && !carouselReady
+                ? "⚠️ Aggiungi media"
+                : mode === "pianifica" ? "📅 Pianifica" : "📤 Pubblica ora"}
             </button>
           </div>
         )}
