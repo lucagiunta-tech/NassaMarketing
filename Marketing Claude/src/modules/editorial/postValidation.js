@@ -95,17 +95,37 @@ export function validatePostFormItem(post = {}, options = {}) {
   const stato = normalizeFeedStatus(post.stato || "bozza");
   const captionLimit = getCaptionLimitForPlatforms(piattaforme, cfg);
   const longestCaptionLength = Math.max(captionA.length, captionB.length);
+  const isDraft = stato === "bozza";
+  const isScheduledOrPublished = cfg.scheduledStatuses.includes(stato);
 
+  // Core: always need at least some content
   if (!titolo && !captionA && !captionB) errors.push("Inserisci almeno un titolo o una caption.");
   if (!cfg.validTypes.includes(tipo)) errors.push("Formato post non valido.");
-  if (!piattaforme.length) errors.push("Seleziona almeno una piattaforma.");
   if (!cfg.validStatuses.includes(stato)) errors.push("Stato editoriale non valido.");
-  if (!isValidISODate(post.data)) errors.push("La data deve essere valida nel formato YYYY-MM-DD.");
-  if (!isValidTime(post.time)) errors.push("L'orario deve essere valido nel formato HH:MM.");
-  if (cfg.scheduledStatuses.includes(stato) && !post.data) errors.push("Per i post schedulati o pubblicati serve una data.");
 
+  // Platform: required for non-drafts, warning for drafts
+  if (!piattaforme.length) {
+    if (isDraft) warnings.push("Nessuna piattaforma selezionata — selezionala prima della revisione.");
+    else errors.push("Seleziona almeno una piattaforma.");
+  }
+
+  // Date: required for scheduled/published, warning for invalid format on others
+  if (post.data && !isValidISODate(post.data)) {
+    if (isDraft) warnings.push("Data in formato non standard — verrà normalizzata.");
+    else errors.push("La data deve essere valida nel formato YYYY-MM-DD.");
+  }
+  if (!isValidTime(post.time)) {
+    if (isDraft) warnings.push("Orario in formato non valido.");
+    else errors.push("L'orario deve essere valido nel formato HH:MM.");
+  }
+  if (isScheduledOrPublished && !post.data) errors.push("Per i post schedulati o pubblicati serve una data.");
+
+  // URL validation — always check, but softer for drafts
   [["Link CTA", post.ctaLink], ["Link asset", post.linkAsset], ["URL immagine", post.immagineUrl], ["URL video", post.videoUrl]].forEach(([label, value]) => {
-    if (!isValidOptionalUrl(value)) errors.push(`${label} non valido: usa un URL http/https.`);
+    if (!isValidOptionalUrl(value)) {
+      if (isDraft) warnings.push(`${label}: URL non valido (usa http/https).`);
+      else errors.push(`${label} non valido: usa un URL http/https.`);
+    }
   });
 
   if (longestCaptionLength > captionLimit) warnings.push(`Caption oltre il limite consigliato (${longestCaptionLength}/${captionLimit} caratteri).`);

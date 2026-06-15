@@ -957,7 +957,7 @@
 .cal-period-month{font-size:9px;font-weight:400;opacity:.7;}
 /* FEED PREVIEW — updated layout */
 .fpg-outer{display:flex;gap:0;flex:1;overflow:hidden;}
-.fpg-list-panel{width:240px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--white);}
+.fpg-list-panel{width:300px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;background:var(--white);}
 .fpg-list-hdr{padding:12px 14px;font-size:12px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--white);z-index:2;}
 .fpg-list-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
 .fpg-list-row:hover{background:var(--bg);}
@@ -994,8 +994,8 @@
 .cal-split-stato{font-size:12px;flex-shrink:0;}
 .cal-split-cal{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 /* FEED PREVIEW GRID */
-.fpg-outer{display:flex;gap:32px;padding:24px 28px;flex:1;overflow:auto;align-items:flex-start;}
-.fpg-phone{background:#fff;border:1px solid var(--border);border-radius:16px;width:340px;flex-shrink:0;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);}
+.fpg-outer{display:flex;gap:24px;padding:24px 28px;flex:1;overflow:auto;align-items:flex-start;}
+.fpg-phone{background:#fff;border:1px solid var(--border);border-radius:16px;width:420px;max-width:50%;flex-shrink:0;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);}
 .fpg-ig-hdr{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #EFEFEF;}
 .fpg-ig-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#E1306C,#F77737,#FCAF45);color:#fff;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .fpg-ig-meta{}
@@ -1049,7 +1049,7 @@
 .ideas-col-drop{background:#F0FDF4!important;outline:2px dashed #16A34A;outline-offset:-4px;}
 .ideas-col-drop .ideas-col-hdr{background:#DCFCE7!important;}
 /* POST FORM MODAL (Loomly-inspired) */
-.pfm-wrap{background:var(--white);border-radius:14px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;margin:auto;}
+.pfm-wrap{background:var(--white);border-radius:14px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;margin:auto;}
 .pfm-header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;gap:12px;}
 .pfm-header-left{display:flex;align-items:center;gap:12px;flex:1;min-width:0;}
 .pfm-thumb{width:52px;height:52px;border-radius:8px;overflow:hidden;background:var(--bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:22px;}
@@ -1577,7 +1577,7 @@
 .ig-bottom-hint{font-size:9px;color:#999;text-align:center;padding:8px 0;}
 
 /* POST FORM MODAL */
-.post-form-modal{background:var(--white);border-radius:12px;width:100%;max-width:680px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;}
+.post-form-modal{background:var(--white);border-radius:12px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;}
 .pf-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);}
 .pf-thumb{width:60px;height:60px;border-radius:8px;overflow:hidden;background:var(--bg);flex-shrink:0;}
 .pf-thumb img{width:100%;height:100%;object-fit:cover;}
@@ -2341,6 +2341,8 @@
   .cs-wrap { padding: 24px 32px; }
   .pv-topbar { padding: 10px 16px; gap: 10px; }
   .module-btn { padding: 11px 12px; font-size: 11px; }
+  .fpg-phone { width: 340px; }
+  .fpg-list-panel { width: 240px; }
 }
 
 /* ── Small tablet / Large phone (≤768px) — sidebar collapses ── */
@@ -2392,6 +2394,12 @@
   .cal-cell { min-height: 60px; padding: 4px; }
   .cal-chip { font-size: 8px; padding: 1px 3px; }
   .ed-post-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .fpg-outer { flex-direction: column; gap: 16px; padding: 16px; }
+  .fpg-phone { width: 100%; max-width: 100%; }
+  .fpg-list-panel { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 200px; }
+  .feed-wrap { flex-direction: column; }
+  .phone-wrap { width: 100%; border-left: none; border-top: 1px solid var(--border); }
+  .post-form-modal, .pfm-wrap { max-width: 95vw !important; }
 }
 
 /* ── Phone (≤480px) ── */

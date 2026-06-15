@@ -407,11 +407,12 @@ export function PostValidationSummary({ validation }) {
 
 // ─── POST FORM MODAL ─────────────────────────────────────────────────────────
 export function PostFormModal({ item, members, onSave, onDelete, onClose, pilastri=[], project=null }) {
-  const [f, setF] = useState({ piattaforme:["instagram"], membersAssigned:[], comments:[], ...item });
+  const [f, setF] = useState({ piattaforme:["instagram"], membersAssigned:[], comments:[], mediaUrls:[], ...item });
   const [imgLoading, setImgLoading] = useState(false);
   const [vidObjUrl,  setVidObjUrl]  = useState(item.videoUrl||"");
   const [aiCaption,  setAiCaption]  = useState(false);
   const [dragOver,   setDragOver]   = useState(false);
+  const [mediaUrlInput, setMediaUrlInput] = useState("");
 
   function set(k,v){ setF(p=>({...p,[k]:v})); }
   function togglePiat(id){ const c=f.piattaforme||[]; set("piattaforme",c.includes(id)?c.filter(p=>p!==id):[...c,id]); }
@@ -420,7 +421,26 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
   async function handleImageFile(file){
     if(!file||!file.type.startsWith("image/")) return;
     setImgLoading(true);
-    try { const b64=await fileToBase64(file); set("immagineBase64",b64); set("immagineUrl",""); } catch{}
+    try {
+      const b64=await fileToBase64(file);
+      if(f.tipo==="carousel"){
+        // For carousel: add to mediaUrls array
+        setF(p=>({...p, mediaUrls:[...(p.mediaUrls||[]),b64], immagineBase64:b64}));
+      } else {
+        set("immagineBase64",b64); set("immagineUrl","");
+      }
+    } catch{}
+    setImgLoading(false);
+  }
+  async function handleMultipleFiles(files){
+    setImgLoading(true);
+    for(const file of files){
+      if(file.type.startsWith("image/")){
+        try { const b64=await fileToBase64(file); setF(p=>({...p, mediaUrls:[...(p.mediaUrls||[]),b64], immagineBase64:b64})); } catch{}
+      } else if(file.type.startsWith("video/")){
+        handleVideoFile(file);
+      }
+    }
     setImgLoading(false);
   }
   function handleVideoFile(file){
@@ -430,14 +450,30 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
     setVidObjUrl(url); set("videoUrl",url);
   }
   function onInputChange(e,type){
-    const file=e.target.files?.[0]; if(!file) return;
-    type==="image"?handleImageFile(file):handleVideoFile(file);
+    const files=e.target.files; if(!files?.length) return;
+    if(f.tipo==="carousel" && files.length>1){ handleMultipleFiles(Array.from(files)); }
+    else { const file=files[0]; type==="image"?handleImageFile(file):handleVideoFile(file); }
     e.target.value="";
   }
   function onDrop(e){
     e.preventDefault(); setDragOver(false);
-    const file=e.dataTransfer.files?.[0]; if(!file) return;
+    const files=e.dataTransfer.files;
+    if(f.tipo==="carousel" && files.length>1){ handleMultipleFiles(Array.from(files)); return; }
+    const file=files?.[0]; if(!file) return;
     file.type.startsWith("image/")?handleImageFile(file):handleVideoFile(file);
+  }
+  function addMediaUrl(){
+    const url=mediaUrlInput.trim();
+    if(!url) return;
+    setF(p=>({...p, mediaUrls:[...(p.mediaUrls||[]),url], immagineUrl:url}));
+    setMediaUrlInput("");
+  }
+  function removeMedia(idx){
+    setF(p=>{
+      const urls=[...(p.mediaUrls||[])];
+      urls.splice(idx,1);
+      return {...p, mediaUrls:urls, immagineBase64:urls[0]||"", immagineUrl:""};
+    });
   }
 
   async function generateCaption(){
@@ -457,7 +493,9 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
     setAiCaption(false);
   }
 
-  const previewSrc=f.immagineBase64||f.immagineUrl||"";
+  const previewSrc=f.immagineBase64||f.immagineUrl||((f.mediaUrls||[])[0])||"";
+  const isCarousel=f.tipo==="carousel";
+  const carouselMedia=f.mediaUrls||[];
   const isVideo=f.tipo==="reel"||f.tipo==="storia";
   const activeCaption=f.abActive?(f.captionB||""):(f.caption||"");
   const captionLen=activeCaption.length;
@@ -465,9 +503,9 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
 
   function handleSaveDraft(){
     const draft={...f,stato:POST_STATUS.bozza};
-    const draftValidation=validatePostFormItem(draft);
-    if(!draftValidation.isValid) return;
-    set("stato",POST_STATUS.bozza);
+    // Drafts only need minimal content — title or caption
+    const hasContent = (draft.titolo||"").trim() || (draft.caption||"").trim() || (draft.captionB||"").trim();
+    if(!hasContent) return;
     onSave(draft);
   }
 
@@ -591,12 +629,33 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
           )}
 
           {/* MEDIA UPLOAD */}
-          <div className="pfm-label" style={{marginBottom:6}}>Media</div>
-          <div className={`pfm-media-zone ${dragOver?"pfm-media-dragover":""} ${previewSrc?"pfm-media-has":""}`}
+          <div className="pfm-label" style={{marginBottom:6,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+            <span>Media {isCarousel&&carouselMedia.length>0&&`(${carouselMedia.length} elementi)`}</span>
+            <label className="btn-primary sm" style={{cursor:"pointer",fontSize:10,padding:"4px 10px"}}>
+              📤 {isCarousel?"Aggiungi file":"Carica file"}
+              <input type="file" accept="image/*,video/*" multiple={isCarousel} style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")} disabled={imgLoading}/>
+            </label>
+          </div>
+
+          {/* CAROUSEL GALLERY */}
+          {isCarousel&&carouselMedia.length>0&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",gap:6,marginBottom:10}}>
+              {carouselMedia.map((url,i)=>(
+                <div key={i} style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--border)",background:"var(--bg)"}}>
+                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>
+                  <button onClick={()=>removeMedia(i)} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+                  <div style={{position:"absolute",bottom:2,left:2,fontSize:9,fontWeight:700,background:"rgba(0,0,0,.5)",color:"#fff",padding:"1px 5px",borderRadius:3}}>{i+1}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* DROP ZONE */}
+          <div className={`pfm-media-zone ${dragOver?"pfm-media-dragover":""} ${previewSrc&&!isCarousel?"pfm-media-has":""}`}
             onDragOver={e=>{e.preventDefault();setDragOver(true);}}
             onDragLeave={()=>setDragOver(false)}
             onDrop={onDrop}>
-            {previewSrc?(
+            {previewSrc&&!isCarousel?(
               <div className="pfm-media-preview">
                 <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
                 <div className="pfm-media-overlay">
@@ -607,18 +666,25 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
             ):(
               <div className="pfm-media-empty">
                 <div style={{fontSize:32,marginBottom:8}}>🖼️</div>
-                <div style={{fontSize:12,color:"var(--ink3)",fontWeight:600,marginBottom:4}}>Aggiungi immagini, video o PDF</div>
+                <div style={{fontSize:12,color:"var(--ink3)",fontWeight:600,marginBottom:4}}>
+                  {isCarousel?"Trascina file per il carousel":"Aggiungi immagini, video o PDF"}
+                </div>
                 <div style={{fontSize:11,color:"var(--ink5)",marginBottom:14}}>Trascina qui il file oppure</div>
-                <div style={{display:"flex",gap:8,justifyContent:"center"}}>
+                <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
                   <label className="btn-outline sm" style={{cursor:"pointer"}}>
-                    📤 Carica media
-                    <input type="file" accept="image/*,video/*" style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")} disabled={imgLoading}/>
+                    📤 Carica {isCarousel?"immagini":"media"}
+                    <input type="file" accept="image/*,video/*" multiple={isCarousel} style={{display:"none"}} onChange={e=>onInputChange(e,e.target.files?.[0]?.type?.startsWith("image/")?"image":"video")} disabled={imgLoading}/>
                   </label>
                   <span style={{fontSize:11,color:"var(--ink5)",alignSelf:"center"}}>o incolla URL</span>
                 </div>
-                <input className="inp" style={{marginTop:10,maxWidth:380,textAlign:"center"}}
-                  placeholder="https://www.dropbox.com/... o URL pubblico" value={f.immagineUrl||""}
-                  onChange={e=>{set("immagineUrl",e.target.value);set("immagineBase64","");}}/>
+                <div style={{display:"flex",gap:6,marginTop:10,maxWidth:400,width:"100%"}}>
+                  <input className="inp" style={{flex:1,textAlign:"center"}}
+                    placeholder={isCarousel?"URL Dropbox immagine (aggiungi una alla volta)":"https://www.dropbox.com/... o URL pubblico"}
+                    value={isCarousel?mediaUrlInput:(f.immagineUrl||"")}
+                    onChange={isCarousel?e=>setMediaUrlInput(e.target.value):e=>{set("immagineUrl",e.target.value);set("immagineBase64","");}}
+                    onKeyDown={isCarousel?e=>{if(e.key==="Enter"){e.preventDefault();addMediaUrl();}}:undefined}/>
+                  {isCarousel&&<button className="btn-primary sm" onClick={addMediaUrl} disabled={!mediaUrlInput.trim()}>+</button>}
+                </div>
                 {isVideo&&<input className="inp" style={{marginTop:8,maxWidth:380,textAlign:"center"}}
                   placeholder="URL video / Reel (Dropbox, Drive…)" value={f.videoUrl&&!f.videoUrl.startsWith("blob:")?f.videoUrl:""}
                   onChange={e=>{set("videoUrl",e.target.value);setVidObjUrl(e.target.value);}}/>}
@@ -812,7 +878,7 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
             <PostValidationSummary validation={validation}/>
           </div>
           <div style={{display:"flex",gap:8}}>
-            <button className="btn-ghost" onClick={handleSaveDraft} disabled={!validation.isValid}>Salva bozza</button>
+            <button className="btn-ghost" onClick={handleSaveDraft}>Salva bozza</button>
             <button className="btn-primary" onClick={handleSavePost} disabled={!validation.isValid}>Salva →</button>
           </div>
         </div>
