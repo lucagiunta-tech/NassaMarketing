@@ -63,8 +63,10 @@ export function isValidISODate(value) {
   const v = String(value || "").trim();
   if (!v) return true;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
-  const d = new Date(`${v}T00:00:00`);
-  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  // Use local date parts — avoids UTC offset bug (e.g. Italy UTC+2 would shift midnight to prev day in toISOString)
+  const [y, m, d] = v.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  return date.getFullYear() === y && date.getMonth() === m - 1 && date.getDate() === d;
 }
 
 export function isValidTime(value) {
