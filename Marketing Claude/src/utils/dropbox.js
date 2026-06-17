@@ -40,13 +40,13 @@ export async function uploadToDropbox(file, clientName = "DefaultClient", subfol
   const token = await getDropboxToken(signal);
   if (!token) throw new Error("Could not retrieve Dropbox token");
 
-  // 2. Upload file
-  const uploadRes = await fetch(DROPBOX_UPLOAD_URL, {
+  // 2. Upload file (using URL parameters to avoid CORS preflight options block in browser)
+  const arg = JSON.stringify({ path, mode: "overwrite", autorename: true });
+  const uploadUrl = `${DROPBOX_UPLOAD_URL}?authorization=Bearer ${encodeURIComponent(token)}&arg=${encodeURIComponent(arg)}`;
+  const uploadRes = await fetch(uploadUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/octet-stream",
-      "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", autorename: true }),
+      "Content-Type": "text/plain; charset=dropbox-cors-hack",
     },
     body: file,
     signal,

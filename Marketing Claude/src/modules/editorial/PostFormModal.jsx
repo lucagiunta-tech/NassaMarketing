@@ -408,6 +408,17 @@ export function PostValidationSummary({ validation }) {
 
 // ─── CAROUSEL EDITOR PREVIEW ─────────────────────────────────────────────────
 // IG-style carousel for the upload form with arrow navigation + remove button
+function isVideoUrl(url) {
+  if (!url) return false;
+  const s = String(url).toLowerCase();
+  return /\.(mp4|mov|webm|avi|mkv|3gp|flv|wmv)(\?|$)/i.test(s) || 
+         s.includes("video") || 
+         s.startsWith("blob:") || 
+         s.includes("dropbox.com") || 
+         s.includes("drive.google.com");
+}
+
+// IG-style carousel for the upload form with arrow navigation + remove button
 function CarouselEditorPreview({ urls, onRemove, onReorder }) {
   const [current, setCurrent] = useState(0);
   const [failedUrls, setFailedUrls] = useState({});
@@ -432,9 +443,16 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
         {failedUrls[safeIdx] ? (
           <div style={{ color: "var(--ink-3)", fontSize: 11, textAlign: "center", padding: "24px 16px" }}>
             <div style={{ fontSize: 24, marginBottom: 6 }}>⚠️</div>
-            <div style={{ fontWeight: 600 }}>Impossibile caricare l'immagine</div>
+            <div style={{ fontWeight: 600 }}>Impossibile caricare il file</div>
             <div style={{ fontSize: 9, marginTop: 4, color: "var(--ink-5)", wordBreak: "break-all" }}>{urls[safeIdx] || "URL vuoto"}</div>
           </div>
+        ) : isVideoUrl(urls[safeIdx]) ? (
+          <video
+            src={urls[safeIdx]}
+            controls
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            onError={() => handleImageError(safeIdx)}
+          />
         ) : (
           <img
             src={urls[safeIdx]}
@@ -448,7 +466,7 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
           type="button"
           onClick={() => { onRemove(safeIdx); setCurrent(Math.max(0, safeIdx - 1)); }}
           style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4 }}
-          title="Rimuovi immagine"
+          title="Rimuovi file"
         >✕</button>
         
         {/* Reorder controls */}
@@ -499,6 +517,13 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
             style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 4, overflow: "hidden", cursor: "pointer", border: i === safeIdx ? "2px solid #fff" : "2px solid transparent", opacity: i === safeIdx ? 1 : 0.5, transition: "all .15s", position: "relative", background: "#222", display: "flex", alignItems: "center", justifyContent: "center" }}>
             {failedUrls[i] ? (
               <span style={{ fontSize: 10, color: "var(--ink-4)" }}>⚠️</span>
+            ) : isVideoUrl(url) ? (
+              <div style={{ position: "relative", width: "100%", height: "100%" }}>
+                <video src={url} style={{ width: "100%", height: "100%", objectFit: "cover" }} preload="metadata" muted />
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.3)" }}>
+                  <span style={{ color: "#fff", fontSize: 10 }}>▶</span>
+                </div>
+              </div>
             ) : (
               <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => handleImageError(i)} />
             )}
@@ -1023,13 +1048,13 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
               )
             ) : (
               previewSrc ? (
-                <div className="pfm-media-preview">
+                <div className="pfm-media-preview" style={isVideo ? { aspectRatio: "9/16", height: "400px", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", borderRadius: 8, margin: "0 auto" } : {}}>
                   {isVideo && (f.videoUrl || vidObjUrl) ? (
-                    <video src={f.videoUrl || vidObjUrl} controls style={{ width: "100%", maxHeight: "300px", display: "block" }} />
+                    <video src={f.videoUrl || vidObjUrl} controls style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
                   ) : (
                     <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
                   )}
-                  <div className="pfm-media-overlay">
+                  <div className="pfm-media-overlay" style={isVideo ? { top: 0, bottom: "auto", height: "40px" } : {}}>
                     <button type="button" className="pfm-media-change" onClick={()=>fileInputChangeRef.current?.click()}>📤 Cambia</button>
                     {previewSrc && (
                       <a href={previewSrc} target="_blank" rel="noreferrer" className="pfm-media-change" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔍 Zoom</a>

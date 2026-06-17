@@ -45,12 +45,16 @@ function CarouselViewer({ urls, aspectRatio = "1/1" }) {
   return (
     <div style={{ position: "relative", width: "100%", background: "#000" }}>
       <div style={{ aspectRatio, width: "100%", overflow: "hidden", position: "relative" }}>
-        <img
-          src={urls[current]}
-          alt=""
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-          onError={e => e.target.style.display = "none"}
-        />
+        {isVideoUrl(urls[current]) ? (
+          <VideoPlayer src={urls[current]} aspectRatio={aspectRatio} />
+        ) : (
+          <img
+            src={urls[current]}
+            alt=""
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            onError={e => e.target.style.display = "none"}
+          />
+        )}
       </div>
       {/* Navigation arrows */}
       {total > 1 && current > 0 && (
