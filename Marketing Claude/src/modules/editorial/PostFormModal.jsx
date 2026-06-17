@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { callClaude } from "../../services/aiService";
 import { CaptionScorer } from "./CaptionScorer";
 import { validatePostFormItem } from "./postValidation";
+import { uploadToDropbox, fixMediaUrl } from "../../utils/dropbox";
 import {
   FEED_TIPI,
   FEED_TIPI_ICON,
@@ -486,7 +487,19 @@ function normalizeDateToISO(dateStr) {
 }
 
 export function PostFormModal({ item, members, onSave, onDelete, onClose, pilastri=[], project=null }) {
-  const [f, setF] = useState({ piattaforme:["instagram"], membersAssigned:[], comments:[], mediaUrls:[], ...item, data: normalizeDateToISO(item.data) });
+  const clientName = project?.name || project?.interview?.nome || "DefaultClient";
+  const initialMedia = item.mediaUrls || item.immagini || item.carouselMedia || [];
+  
+  const [f, setF] = useState({
+    piattaforme: ["instagram"],
+    membersAssigned: [],
+    comments: [],
+    ...item,
+    mediaUrls: initialMedia,
+    immagini: initialMedia,
+    carouselMedia: initialMedia,
+    data: normalizeDateToISO(item.data)
+  });
   const [imgLoading, setImgLoading] = useState(false);
   const [vidObjUrl,  setVidObjUrl]  = useState(item.videoUrl||"");
   const [aiCaption,  setAiCaption]  = useState(false);
@@ -503,32 +516,88 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
     if(!file||!file.type.startsWith("image/")) return;
     setImgLoading(true);
     try {
-      const b64=await fileToBase64(file);
+      const url = await uploadToDropbox(file, clientName, "Images");
       if(f.tipo==="carousel"){
-        // For carousel: add to mediaUrls array
-        setF(p=>({...p, mediaUrls:[...(p.mediaUrls||[]),b64], immagineBase64:b64}));
+        setF(p => {
+          const list = [...(p.mediaUrls || []), url];
+          return {
+            ...p,
+            mediaUrls: list,
+            immagini: list,
+            carouselMedia: list,
+            immagineUrl: list[0] || "",
+            immagineBase64: ""
+          };
+        });
       } else {
-        set("immagineBase64",b64); set("immagineUrl","");
+        setF(p => ({
+          ...p,
+          immagineUrl: url,
+          immagineBase64: "",
+          mediaUrls: [url],
+          immagini: [url],
+          carouselMedia: [url]
+        }));
       }
-    } catch{}
+    } catch(err) {
+      alert("Errore caricamento Dropbox: " + err.message);
+    }
     setImgLoading(false);
   }
   async function handleMultipleFiles(files){
     setImgLoading(true);
     for(const file of files){
-      if(file.type.startsWith("image/")){
-        try { const b64=await fileToBase64(file); setF(p=>({...p, mediaUrls:[...(p.mediaUrls||[]),b64], immagineBase64:b64})); } catch{}
-      } else if(file.type.startsWith("video/")){
-        handleVideoFile(file);
+      try {
+        if(file.type.startsWith("image/")){
+          const url = await uploadToDropbox(file, clientName, "Images");
+          setF(p => {
+            const list = [...(p.mediaUrls || []), url];
+            return {
+              ...p,
+              mediaUrls: list,
+              immagini: list,
+              carouselMedia: list,
+              immagineUrl: list[0] || "",
+              immagineBase64: ""
+            };
+          });
+        } else if(file.type.startsWith("video/")){
+          const url = await uploadToDropbox(file, clientName, "Videos");
+          setF(p => {
+            const list = [...(p.mediaUrls || []), url];
+            return {
+              ...p,
+              mediaUrls: list,
+              immagini: list,
+              carouselMedia: list,
+              immagineUrl: list[0] || "",
+              immagineBase64: ""
+            };
+          });
+        }
+      } catch(err) {
+        alert("Errore caricamento Dropbox: " + err.message);
       }
     }
     setImgLoading(false);
   }
-  function handleVideoFile(file){
+  async function handleVideoFile(file){
     if(!file||!file.type.startsWith("video/")) return;
-    if(vidObjUrl.startsWith("blob:")) URL.revokeObjectURL(vidObjUrl);
-    const url=URL.createObjectURL(file);
-    setVidObjUrl(url); set("videoUrl",url);
+    setImgLoading(true);
+    try {
+      const url = await uploadToDropbox(file, clientName, "Videos");
+      setVidObjUrl(url);
+      setF(p => ({
+        ...p,
+        videoUrl: url,
+        mediaUrls: [url],
+        immagini: [url],
+        carouselMedia: [url]
+      }));
+    } catch(err) {
+      alert("Errore caricamento video Dropbox: " + err.message);
+    }
+    setImgLoading(false);
   }
   function onInputChange(e,type){
     const files=e.target.files; if(!files?.length) return;
@@ -546,14 +615,31 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
   function addMediaUrl(){
     const url=mediaUrlInput.trim();
     if(!url) return;
-    setF(p=>({...p, mediaUrls:[...(p.mediaUrls||[]),url], immagineUrl:url}));
+    const fixed = fixMediaUrl(url);
+    setF(p => {
+      const list = [...(p.mediaUrls || []), fixed];
+      return {
+        ...p,
+        mediaUrls: list,
+        immagini: list,
+        carouselMedia: list,
+        immagineUrl: list[0] || ""
+      };
+    });
     setMediaUrlInput("");
   }
   function removeMedia(idx){
-    setF(p=>{
-      const urls=[...(p.mediaUrls||[])];
-      urls.splice(idx,1);
-      return {...p, mediaUrls:urls, immagineBase64:urls[0]||"", immagineUrl:""};
+    setF(p => {
+      const list = [...(p.mediaUrls || [])];
+      list.splice(idx,1);
+      return {
+        ...p,
+        mediaUrls: list,
+        immagini: list,
+        carouselMedia: list,
+        immagineUrl: list[0] || "",
+        immagineBase64: ""
+      };
     });
   }
 
@@ -574,7 +660,7 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
     setAiCaption(false);
   }
 
-  const previewSrc=f.immagineBase64||f.immagineUrl||((f.mediaUrls||[])[0])||"";
+  const previewSrc=f.immagineUrl||f.immagineBase64||((f.mediaUrls||[])[0])||"";
   const isCarousel=f.tipo==="carousel";
   const carouselMedia=f.mediaUrls||[];
   const isVideo=f.tipo==="reel"||f.tipo==="storia";
@@ -583,16 +669,31 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
   const validation=validatePostFormItem(f);
 
   function handleSaveDraft(){
-    const draft={...f,stato:POST_STATUS.bozza};
-    // Drafts only need minimal content — title or caption
-    const hasContent = (draft.titolo||"").trim() || (draft.caption||"").trim() || (draft.captionB||"").trim();
+    const currentMedia = f.mediaUrls || [];
+    const draft = {
+      ...f,
+      mediaUrls: currentMedia,
+      immagini: currentMedia,
+      carouselMedia: currentMedia,
+      stato: POST_STATUS.bozza
+    };
+    const hasContent = (draft.titolo||"").trim() || (draft.caption||"").trim() || (draft.captionB||"").trim() || currentMedia.length > 0;
     if(!hasContent) return;
     onSave(draft);
   }
 
   function handleSavePost(){
     if(!validation.isValid) return;
-    onSave({...f,tipo:normalizePostType(f.tipo),stato:normalizeFeedStatus(f.stato),piattaforme:normalizePostPlatforms(f)});
+    const currentMedia = f.mediaUrls || [];
+    onSave({
+      ...f,
+      mediaUrls: currentMedia,
+      immagini: currentMedia,
+      carouselMedia: currentMedia,
+      tipo: normalizePostType(f.tipo),
+      stato: normalizeFeedStatus(f.stato),
+      piattaforme: normalizePostPlatforms(f)
+    });
   }
 
   return(
@@ -742,6 +843,9 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
                 <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
                 <div className="pfm-media-overlay">
                   <button type="button" className="pfm-media-change" onClick={()=>fileInputChangeRef.current?.click()}>📤 Cambia</button>
+                  {previewSrc && (
+                    <a href={previewSrc} target="_blank" rel="noreferrer" className="pfm-media-change" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔍 Zoom</a>
+                  )}
                   <button className="pfm-media-remove" onClick={()=>{set("immagineBase64","");set("immagineUrl","");}}>✕</button>
                 </div>
               </div>
