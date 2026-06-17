@@ -408,7 +408,7 @@ export function PostValidationSummary({ validation }) {
 
 // ─── CAROUSEL EDITOR PREVIEW ─────────────────────────────────────────────────
 // IG-style carousel for the upload form with arrow navigation + remove button
-function CarouselEditorPreview({ urls, onRemove }) {
+function CarouselEditorPreview({ urls, onRemove, onReorder }) {
   const [current, setCurrent] = useState(0);
   const total = urls.length;
 
@@ -431,6 +431,27 @@ function CarouselEditorPreview({ urls, onRemove }) {
           style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4 }}
           title="Rimuovi immagine"
         >✕</button>
+        
+        {/* Reorder controls */}
+        {total > 1 && (
+          <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", gap: 6, zIndex: 4 }}>
+            {safeIdx > 0 && (
+              <button
+                onClick={() => { onReorder(safeIdx, safeIdx - 1); setCurrent(safeIdx - 1); }}
+                style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                title="Sposta a sinistra"
+              >◀</button>
+            )}
+            {safeIdx < total - 1 && (
+              <button
+                onClick={() => { onReorder(safeIdx, safeIdx + 1); setCurrent(safeIdx + 1); }}
+                style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                title="Sposta a destra"
+              >▶</button>
+            )}
+          </div>
+        )}
+
         {/* Counter */}
         <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99, zIndex: 4 }}>
           {safeIdx + 1} / {total}
@@ -642,6 +663,21 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
       };
     });
   }
+  function moveMedia(fromIdx, toIdx) {
+    setF(p => {
+      const list = [...(p.mediaUrls || [])];
+      const [moved] = list.splice(fromIdx, 1);
+      list.splice(toIdx, 0, moved);
+      return {
+        ...p,
+        mediaUrls: list,
+        immagini: list,
+        carouselMedia: list,
+        immagineUrl: list[0] || "",
+        immagineBase64: ""
+      };
+    });
+  }
 
   async function generateCaption(){
     setAiCaption(true);
@@ -668,28 +704,54 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
   const captionLen=activeCaption.length;
   const validation=validatePostFormItem(f);
 
+  function getFilteredMedia() {
+    if (f.tipo === "carousel") {
+      const list = f.mediaUrls || [];
+      return {
+        mediaUrls: list,
+        immagini: list,
+        carouselMedia: list,
+        immagineUrl: list[0] || "",
+        videoUrl: ""
+      };
+    } else if (f.tipo === "reel" || f.tipo === "storia") {
+      return {
+        mediaUrls: f.videoUrl ? [f.videoUrl] : [],
+        immagini: [],
+        carouselMedia: [],
+        immagineUrl: "",
+        videoUrl: f.videoUrl || ""
+      };
+    } else {
+      // Single post
+      return {
+        mediaUrls: f.immagineUrl ? [f.immagineUrl] : [],
+        immagini: f.immagineUrl ? [f.immagineUrl] : [],
+        carouselMedia: [],
+        immagineUrl: f.immagineUrl || "",
+        videoUrl: ""
+      };
+    }
+  }
+
   function handleSaveDraft(){
-    const currentMedia = f.mediaUrls || [];
+    const mediaObj = getFilteredMedia();
     const draft = {
       ...f,
-      mediaUrls: currentMedia,
-      immagini: currentMedia,
-      carouselMedia: currentMedia,
+      ...mediaObj,
       stato: POST_STATUS.bozza
     };
-    const hasContent = (draft.titolo||"").trim() || (draft.caption||"").trim() || (draft.captionB||"").trim() || currentMedia.length > 0;
+    const hasContent = (draft.titolo||"").trim() || (draft.caption||"").trim() || (draft.captionB||"").trim() || (draft.mediaUrls || []).length > 0 || draft.videoUrl;
     if(!hasContent) return;
     onSave(draft);
   }
 
   function handleSavePost(){
     if(!validation.isValid) return;
-    const currentMedia = f.mediaUrls || [];
+    const mediaObj = getFilteredMedia();
     onSave({
       ...f,
-      mediaUrls: currentMedia,
-      immagini: currentMedia,
-      carouselMedia: currentMedia,
+      ...mediaObj,
       tipo: normalizePostType(f.tipo),
       stato: normalizeFeedStatus(f.stato),
       piattaforme: normalizePostPlatforms(f)
@@ -830,6 +892,7 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
             <CarouselEditorPreview
               urls={carouselMedia}
               onRemove={removeMedia}
+              onReorder={moveMedia}
             />
           )}
 
@@ -846,7 +909,13 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
                   {previewSrc && (
                     <a href={previewSrc} target="_blank" rel="noreferrer" className="pfm-media-change" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔍 Zoom</a>
                   )}
-                  <button className="pfm-media-remove" onClick={()=>{set("immagineBase64","");set("immagineUrl","");}}>✕</button>
+                  <button className="pfm-media-remove" onClick={()=>{
+                    set("immagineBase64","");
+                    set("immagineUrl","");
+                    set("mediaUrls",[]);
+                    set("immagini",[]);
+                    set("carouselMedia",[]);
+                  }}>✕</button>
                 </div>
               </div>
             ):(

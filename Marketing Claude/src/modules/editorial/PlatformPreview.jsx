@@ -50,13 +50,15 @@ function CarouselViewer({ urls, aspectRatio = "1/1" }) {
       {/* Navigation arrows */}
       {total > 1 && current > 0 && (
         <button onClick={() => setCurrent(c => c - 1)}
-          className="pp-carousel-arrow pp-carousel-left" aria-label="Previous">
+          className="pp-carousel-arrow pp-carousel-left" aria-label="Previous"
+          style={{ width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16, borderRadius: "50%", padding: 0 }}>
           ‹
         </button>
       )}
       {total > 1 && current < total - 1 && (
         <button onClick={() => setCurrent(c => c + 1)}
-          className="pp-carousel-arrow pp-carousel-right" aria-label="Next">
+          className="pp-carousel-arrow pp-carousel-right" aria-label="Next"
+          style={{ width: 28, height: 28, minWidth: 28, minHeight: 28, fontSize: 16, borderRadius: "50%", padding: 0 }}>
           ›
         </button>
       )}
