@@ -86,6 +86,8 @@ async function getDropboxToken() {
   try {
     const r = await fetch(TOKEN_API);
     if (!r.ok) return null;
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return null;
     const d = await r.json();
     if (!d.token) return null;
     _dbxToken    = d.token;
@@ -149,9 +151,6 @@ function updateSyncStatus(status, error = null) {
 }
 
 function scheduledDropboxSave(data) {
-  const config = getDropboxSyncConfig();
-  if (!config || !config.active) return; // Only run if user sync is active
-
   updateSyncStatus("syncing");
   if (_dbxTimer) clearTimeout(_dbxTimer);
   _dbxTimer = setTimeout(async () => {

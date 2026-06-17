@@ -78,7 +78,7 @@ import {
   tpGet,
 } from "./modules/team";
 import { CreatorDatabase } from "./modules/overview";
-import { GlobalMetaConnect, GlobalDropboxConnect } from "./modules/meta";
+import { GlobalMetaConnect } from "./modules/meta";
 import { createKosmetikal, createCoopRadenza } from "./templates";
 import { StrategicCascadeBanner, SectionContent } from "./modules/strategy";
 
@@ -4117,17 +4117,6 @@ export default function App(){
 
         <div className="sb-bottom">
           <GlobalMetaConnect globalMeta={globalMeta} onMetaChange={handleMetaChange} clients={clients}/>
-          <GlobalDropboxConnect
-            syncConfig={dropboxSyncConfig}
-            onConnect={handleDropboxConnect}
-            onDisconnect={handleDropboxDisconnect}
-            onToggleActive={handleDropboxToggleActive}
-            onForceLoad={handleDropboxForceLoad}
-            onForceSave={handleDropboxForceSave}
-            syncStatus={dropboxSyncStatus}
-            syncError={dropboxSyncError}
-            lastSyncTime={dropboxLastSyncTime}
-          />
           <button className={`sb-planner-btn ${view==="approvals"?"active":""}`} onClick={()=>{ setView("approvals"); pushUrl("approvals"); }} style={{position:"relative"}}>
             ✅ Approvazioni
             {(()=>{ const n=projects.reduce((s,proj)=>{ const ed=proj.ed||{}; const fi=[...(ed.feedItems||[]),...(ed.contentItems||[])]; return s+fi.filter(f=>f.stato==="revisione"||f.stato==="semaforo").length; },0); return n>0?<span style={{position:"absolute",top:4,right:8,background:"var(--err)",color:"#fff",fontSize:9,fontWeight:800,padding:"1px 5px",borderRadius:99,minWidth:16,textAlign:"center"}}>{n}</span>:null; })()}

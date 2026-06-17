@@ -38,6 +38,7 @@ function isVideoUrl(url) {
          s.includes("video") || 
          s.startsWith("blob:") || 
          s.includes("dropbox.com") || 
+         s.includes("dropboxusercontent.com") || 
          s.includes("drive.google.com");
 }
 
@@ -97,7 +98,7 @@ function CarouselViewer({ urls, aspectRatio = "1/1" }) {
 // ─── VIDEO PLAYER ────────────────────────────────────────────────────────────
 function VideoPlayer({ src, aspectRatio = "9/16" }) {
   const videoRef = useRef(null);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const [canPlay, setCanPlay] = useState(false);
 
   function togglePlay() {
@@ -195,19 +196,26 @@ function InstagramPreview({ post, projectName, avatarLetter }) {
           }
         </div>
       ) : isCarousel ? (
-        <CarouselViewer urls={mediaUrls} aspectRatio="1/1" />
+        <CarouselViewer urls={mediaUrls} aspectRatio="4/5" />
       ) : (
         /* Single post */
-        <div style={{ width: "100%", background: "#fff", display: "block" }}>
-          {mediaUrls[0] ? (
-            isVideoUrl(mediaUrls[0]) ? (
-              <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
+        <div style={{ width: "100%", background: "#000", position: "relative" }}>
+          <div style={{ aspectRatio: "4/5", width: "100%", overflow: "hidden", position: "relative" }}>
+            {mediaUrls[0] ? (
+              isVideoUrl(mediaUrls[0]) ? (
+                <VideoPlayer src={mediaUrls[0]} aspectRatio="4/5" />
+              ) : (
+                <img
+                  src={mediaUrls[0]}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  onError={e => e.target.style.display = "none"}
+                />
+              )
             ) : (
-              <img src={mediaUrls[0]} alt="" style={{ width: "100%", height: "auto", display: "block" }} />
-            )
-          ) : (
-            <div style={{ aspectRatio: "1/1", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#ccc", fontSize: 48 }}>🖼️</div>
-          )}
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#ccc", fontSize: 48 }}>🖼️</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -273,18 +281,25 @@ function FacebookPreview({ post, projectName, avatarLetter }) {
           }
         </div>
       ) : isCarousel ? (
-        <CarouselViewer urls={mediaUrls} aspectRatio="auto" />
+        <CarouselViewer urls={mediaUrls} aspectRatio="4/5" />
       ) : (
-        <div style={{ width: "100%", background: "#000" }}>
-          {mediaUrls[0] ? (
-            isVideoUrl(mediaUrls[0]) ? (
-              <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
+        <div style={{ width: "100%", background: "#000", position: "relative" }}>
+          <div style={{ aspectRatio: "4/5", width: "100%", overflow: "hidden", position: "relative" }}>
+            {mediaUrls[0] ? (
+              isVideoUrl(mediaUrls[0]) ? (
+                <VideoPlayer src={mediaUrls[0]} aspectRatio="4/5" />
+              ) : (
+                <img
+                  src={mediaUrls[0]}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  onError={e => e.target.style.display = "none"}
+                />
+              )
             ) : (
-              <img src={mediaUrls[0]} alt="" style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", margin: "0 auto" }} />
-            )
-          ) : (
-            <div style={{ aspectRatio: "1.91/1", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5", color: "#bbb", fontSize: 48 }}>🖼️</div>
-          )}
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5", color: "#bbb", fontSize: 48 }}>🖼️</div>
+            )}
+          </div>
         </div>
       )}
 
@@ -330,18 +345,25 @@ function LinkedInPreview({ post, projectName, avatarLetter }) {
 
       {/* Media */}
       {isCarousel ? (
-        <CarouselViewer urls={mediaUrls} aspectRatio="1/1" />
+        <CarouselViewer urls={mediaUrls} aspectRatio="4/5" />
       ) : (
-        <div style={{ width: "100%", background: "#f3f2ef" }}>
-          {mediaUrls[0] ? (
-            isVideoUrl(mediaUrls[0]) ? (
-              <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
+        <div style={{ width: "100%", background: "#000", position: "relative" }}>
+          <div style={{ aspectRatio: "4/5", width: "100%", overflow: "hidden", position: "relative" }}>
+            {mediaUrls[0] ? (
+              isVideoUrl(mediaUrls[0]) ? (
+                <VideoPlayer src={mediaUrls[0]} aspectRatio="4/5" />
+              ) : (
+                <img
+                  src={mediaUrls[0]}
+                  alt=""
+                  style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+                  onError={e => e.target.style.display = "none"}
+                />
+              )
             ) : (
-              <img src={mediaUrls[0]} alt="" style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", margin: "0 auto" }} />
-            )
-          ) : (
-            <div style={{ aspectRatio: "1.91/1", display: "flex", alignItems: "center", justifyContent: "center", background: "#f3f2ef", color: "#bbb", fontSize: 48 }}>🖼️</div>
-          )}
+              <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f3f2ef", color: "#bbb", fontSize: 48 }}>🖼️</div>
+            )}
+          </div>
         </div>
       )}
 

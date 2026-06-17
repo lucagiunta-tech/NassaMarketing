@@ -20,6 +20,7 @@ function isVideoUrl(url) {
          s.includes("video") || 
          s.startsWith("blob:") || 
          s.includes("dropbox.com") || 
+         s.includes("dropboxusercontent.com") || 
          s.includes("drive.google.com");
 }
 

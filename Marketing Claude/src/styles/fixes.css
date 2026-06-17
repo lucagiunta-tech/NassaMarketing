@@ -294,12 +294,19 @@ button, [role="button"] {
 .pp-ig-reel-frame,
 .pp-ig-story-frame,
 .pp-fb-reel {
-  max-height: 480px !important;
-  aspect-ratio: 9/16 !important;
-  width: auto !important;
+  height: 480px !important;
+  width: 270px !important;
   margin: 0 auto !important;
   background: #000 !important;
   overflow: hidden !important;
+  position: relative !important;
+}
+
+.pp-ig-reel-frame div,
+.pp-ig-story-frame div,
+.pp-fb-reel div {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .pp-ig-reel-frame video,
@@ -310,7 +317,7 @@ button, [role="button"] {
 .pp-fb-reel img {
   width: 100% !important;
   height: 100% !important;
-  object-fit: contain !important;
+  object-fit: cover !important;
 }
 
 
