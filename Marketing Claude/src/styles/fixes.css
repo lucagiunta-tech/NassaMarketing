@@ -286,4 +286,32 @@ button, [role="button"] {
   grid-template-columns: repeat(3, 1fr) !important;
 }
 
+/* ── 19. Mockup Previews Sizing & Aspect Ratio Constraints ── */
+.pp-preview-frame {
+  max-width: 320px !important;
+}
+
+.pp-ig-reel-frame,
+.pp-ig-story-frame,
+.pp-fb-reel {
+  max-height: 480px !important;
+  aspect-ratio: 9/16 !important;
+  width: auto !important;
+  margin: 0 auto !important;
+  background: #000 !important;
+  overflow: hidden !important;
+}
+
+.pp-ig-reel-frame video,
+.pp-ig-story-frame video,
+.pp-fb-reel video,
+.pp-ig-reel-frame img,
+.pp-ig-story-frame img,
+.pp-fb-reel img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+
 
