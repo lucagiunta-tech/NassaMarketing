@@ -8,7 +8,7 @@
  * This means all admin changes sync across every device in real time.
  */
 
-import { migrateWorkspaceData } from "../modules/editorial/editorialModel";
+import { migrateWorkspaceData } from "../modules/editorial/editorialModel.js";
 
 // ─── CONSTANTS ────────────────────────────────────────────────────────────────
 
@@ -27,12 +27,61 @@ const DROPBOX_UPLOAD_URL  = "https://content.dropboxapi.com/2/files/upload";
 const DROPBOX_DOWNLOAD_URL = "https://content.dropboxapi.com/2/files/download";
 const TOKEN_API           = "/api/dropbox-token";
 
-// ─── DROPBOX TOKEN (cached in memory) ────────────────────────────────────────
+// ─── DROPBOX CONFIG & TOKEN MANAGEMENT ────────────────────────────────────────
+
+export function getDropboxSyncConfig() {
+  try {
+    const v = localStorage.getItem("nms-dropbox-sync-config");
+    return v ? JSON.parse(v) : null;
+  } catch { return null; }
+}
+
+export function saveDropboxSyncConfig(config) {
+  try {
+    if (config) {
+      localStorage.setItem("nms-dropbox-sync-config", JSON.stringify(config));
+    } else {
+      localStorage.removeItem("nms-dropbox-sync-config");
+    }
+  } catch {}
+}
+
+async function refreshUserDropboxToken(refreshToken) {
+  try {
+    const r = await fetch("/api/dropbox-refresh", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d; // { access_token, expires_in }
+  } catch { return null; }
+}
 
 let _dbxToken    = null;
 let _dbxTokenExp = 0;
 
 async function getDropboxToken() {
+  // 1. Prioritize user-authorized Dropbox sync if active
+  const config = getDropboxSyncConfig();
+  if (config && config.active && config.refreshToken) {
+    if (!config.accessToken || Date.now() > (config.expiresAt || 0) - 120_000) {
+      console.log("[storageService] User Dropbox token expired/expiring, refreshing...");
+      const refreshed = await refreshUserDropboxToken(config.refreshToken);
+      if (refreshed && refreshed.access_token) {
+        config.accessToken = refreshed.access_token;
+        config.expiresAt = Date.now() + (refreshed.expires_in || 14400) * 1000;
+        saveDropboxSyncConfig(config);
+        console.log("[storageService] User Dropbox token refreshed successfully");
+      } else {
+        console.warn("[storageService] User Dropbox token refresh failed");
+      }
+    }
+    return config.accessToken || null;
+  }
+
+  // 2. Fallback to global admin/agency token (if configured)
   if (_dbxToken && Date.now() < _dbxTokenExp) return _dbxToken;
   try {
     const r = await fetch(TOKEN_API);
@@ -86,19 +135,75 @@ async function dropboxSave(data) {
   } catch { return false; }
 }
 
-// ─── DEBOUNCED DROPBOX UPLOAD ─────────────────────────────────────────────────
-// Saves to localStorage immediately. Dropbox upload fires 2s after last write.
+// ─── DEBOUNCED & MANUAL DROPBOX SYNC ──────────────────────────────────────────
 
 let _dbxTimer = null;
+let _dbxListener = null;
+
+export function registerDropboxSyncListener(fn) {
+  _dbxListener = fn;
+}
+
+function updateSyncStatus(status, error = null) {
+  if (_dbxListener) _dbxListener(status, error);
+}
 
 function scheduledDropboxSave(data) {
+  const config = getDropboxSyncConfig();
+  if (!config || !config.active) return; // Only run if user sync is active
+
+  updateSyncStatus("syncing");
   if (_dbxTimer) clearTimeout(_dbxTimer);
   _dbxTimer = setTimeout(async () => {
-    const ok = await dropboxSave(data);
-    if (!ok) console.warn("[storageService] Dropbox sync failed — data is safe in localStorage");
-    else console.log("[storageService] Dropbox sync OK");
-    _dbxTimer = null;
+    try {
+      const ok = await dropboxSave(data);
+      if (!ok) {
+        console.warn("[storageService] Dropbox sync failed — data is safe in localStorage");
+        updateSyncStatus("error", "Salvataggio automatico su Dropbox fallito.");
+      } else {
+        console.log("[storageService] Dropbox sync OK");
+        updateSyncStatus("synced");
+      }
+    } catch (e) {
+      updateSyncStatus("error", e.message || "Errore di sincronizzazione Dropbox.");
+    } finally {
+      _dbxTimer = null;
+    }
   }, 2000);
+}
+
+export async function forceDropboxSave(data) {
+  updateSyncStatus("syncing");
+  try {
+    const ok = await dropboxSave(data);
+    if (ok) {
+      updateSyncStatus("synced");
+      return { ok: true };
+    } else {
+      updateSyncStatus("error", "Invio database fallito.");
+      return { ok: false, error: "Dropbox ha rifiutato il caricamento." };
+    }
+  } catch (e) {
+    updateSyncStatus("error", e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+export async function forceDropboxLoad() {
+  updateSyncStatus("syncing");
+  try {
+    const cloudData = await dropboxLoad();
+    if (cloudData) {
+      updateSyncStatus("synced");
+      return { ok: true, data: cloudData };
+    } else {
+      updateSyncStatus("error", "Download database fallito.");
+      return { ok: false, error: "Impossibile scaricare il file. Verifica che esista." };
+    }
+  } catch (e) {
+    updateSyncStatus("error", e.message);
+    return { ok: false, error: e.message };
+  }
 }
 
 // ─── LOCAL STORAGE BACKEND ───────────────────────────────────────────────────
@@ -250,4 +355,35 @@ export async function clearWorkspace(key = WORKSPACE_STORAGE_KEY) {
   if (!storage.available) return { ok: false };
   try { await storage.del(key); return { ok: true }; }
   catch (e) { return { ok: false, error: serializeStorageError(e) }; }
+}
+
+export async function syncDropboxOnConnect(currentLocalData) {
+  const token = await getDropboxToken();
+  if (!token) return { status: "error", error: "Token non valido o non disponibile." };
+
+  try {
+    const r = await fetch(DROPBOX_DOWNLOAD_URL, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Dropbox-API-Arg": JSON.stringify({ path: DROPBOX_FILE_PATH }),
+      },
+    });
+
+    if (r.status === 409) {
+      // File not found yet - first run. Initialize Dropbox with local data.
+      const ok = await dropboxSave(currentLocalData);
+      if (ok) return { status: "initialized" };
+      return { status: "error", error: "Impossibile creare il file del database su Dropbox." };
+    }
+
+    if (!r.ok) {
+      return { status: "error", error: `Errore durante il recupero da Dropbox: ${r.statusText}` };
+    }
+
+    const cloudData = await r.json();
+    return { status: "loaded", data: cloudData };
+  } catch (e) {
+    return { status: "error", error: e.message || "Errore di connessione a Dropbox." };
+  }
 }

@@ -11,6 +11,12 @@ import {
   buildModuleMarkdown,
   buildModulePresentationSlides,
   buildSectionPresentationHTML,
+  getDropboxSyncConfig,
+  saveDropboxSyncConfig,
+  syncDropboxOnConnect,
+  registerDropboxSyncListener,
+  forceDropboxSave,
+  forceDropboxLoad,
 } from "./services";
 import { resolveClientTokens, migrateClientMeta } from "./services/metaService";
 
@@ -72,7 +78,7 @@ import {
   tpGet,
 } from "./modules/team";
 import { CreatorDatabase } from "./modules/overview";
-import { GlobalMetaConnect } from "./modules/meta";
+import { GlobalMetaConnect, GlobalDropboxConnect } from "./modules/meta";
 import { createKosmetikal, createCoopRadenza } from "./templates";
 import { StrategicCascadeBanner, SectionContent } from "./modules/strategy";
 
@@ -3638,6 +3644,30 @@ export default function App(){
   const [storageError,setStorageError]=useState("");
   const [lastSavedAt,setLastSavedAt]=useState(null);
 
+  const [dropboxSyncConfig, setDropboxSyncConfig] = useState(null);
+  const [dropboxSyncStatus, setDropboxSyncStatus] = useState("idle");
+  const [dropboxSyncError, setDropboxSyncError] = useState("");
+  const [dropboxLastSyncTime, setDropboxLastSyncTime] = useState(null);
+
+  useEffect(() => {
+    registerDropboxSyncListener((status, error) => {
+      setDropboxSyncStatus(status);
+      if (error) setDropboxSyncError(error);
+      else setDropboxSyncError("");
+      
+      if (status === "synced") {
+        const now = Date.now();
+        setDropboxLastSyncTime(now);
+        setDropboxSyncConfig(prev => {
+          if (!prev) return null;
+          const next = { ...prev, lastSyncTime: now };
+          saveDropboxSyncConfig(next);
+          return next;
+        });
+      }
+    });
+  }, []);
+
   // Global Cmd+K / Ctrl+K listener
   useEffect(()=>{
     function onKey(e){
@@ -3679,6 +3709,19 @@ export default function App(){
       let d = migrateWorkspaceData(loadResult.data);
       const gm=await loadGlobalMeta(); setGlobalMeta(gm);
       if(loadResult.ok) setStorageStatus("idle");
+
+      // Load Dropbox sync config
+      const dbxCfg = getDropboxSyncConfig();
+      setDropboxSyncConfig(dbxCfg);
+      if (dbxCfg?.active && dbxCfg?.refreshToken) {
+        setDropboxLastSyncTime(dbxCfg.lastSyncTime || null);
+        if (loadResult.ok && loadResult.source === "dropbox") {
+          setDropboxSyncStatus("synced");
+          setDropboxLastSyncTime(Date.now());
+          dbxCfg.lastSyncTime = Date.now();
+          saveDropboxSyncConfig(dbxCfg);
+        }
+      }
       if(d&&(d.projects?.length>0||d.clients?.length>0)){
         let ps=d.projects||[], cs=d.clients||[];
         // Forza inserimento Coop Radenza se non esiste ancora
@@ -3810,6 +3853,87 @@ export default function App(){
   async function handleMetaChange(m){ setGlobalMeta(m); await saveGlobalMeta(m); }
   async function handleUpdate(updated){ const ps=projects.map(p=>p.id===updated.id?updated:p); await persist(ps,clients,activeId); }
   async function handleClientUpdate(upd){ const cs=clients.map(c=>c.id===upd.id?upd:c); setClients(cs); await saveWorkspaceState({projects,clients:cs,activeId}); }
+
+  async function handleDropboxConnect(creds) {
+    const nextConfig = {
+      active: true,
+      lastSyncTime: null,
+      ...creds
+    };
+    setDropboxSyncConfig(nextConfig);
+    saveDropboxSyncConfig(nextConfig);
+    
+    // Trigger initial load/sync
+    setDropboxSyncStatus("syncing");
+    const syncRes = await syncDropboxOnConnect({ projects, clients, activeId });
+    if (syncRes.status === "loaded" && syncRes.data) {
+      const d = migrateWorkspaceData(syncRes.data);
+      setProjects(d.projects || []);
+      setClients(d.clients || []);
+      if (d.activeId) setActiveId(d.activeId);
+      
+      nextConfig.lastSyncTime = Date.now();
+      setDropboxSyncConfig({ ...nextConfig });
+      saveDropboxSyncConfig(nextConfig);
+      setDropboxLastSyncTime(nextConfig.lastSyncTime);
+      setDropboxSyncStatus("synced");
+      alert("Database caricato da Dropbox con successo!");
+    } else if (syncRes.status === "initialized") {
+      nextConfig.lastSyncTime = Date.now();
+      setDropboxSyncConfig({ ...nextConfig });
+      saveDropboxSyncConfig(nextConfig);
+      setDropboxLastSyncTime(nextConfig.lastSyncTime);
+      setDropboxSyncStatus("synced");
+      alert("Database locale sincronizzato ed inizializzato su Dropbox con successo!");
+    } else if (syncRes.status === "error") {
+      setDropboxSyncStatus("error");
+      setDropboxSyncError(syncRes.error || "Impossibile completare il sync iniziale.");
+      alert("Errore durante il sync iniziale: " + syncRes.error);
+    }
+  }
+
+  function handleDropboxDisconnect() {
+    setDropboxSyncConfig(null);
+    saveDropboxSyncConfig(null);
+    setDropboxLastSyncTime(null);
+    setDropboxSyncStatus("idle");
+    setDropboxSyncError("");
+  }
+
+  function handleDropboxToggleActive(active) {
+    setDropboxSyncConfig(prev => {
+      if (!prev) return null;
+      const next = { ...prev, active };
+      saveDropboxSyncConfig(next);
+      return next;
+    });
+  }
+
+  async function handleDropboxForceLoad() {
+    if (!window.confirm("Attenzione: caricando il database da Dropbox sovrascriverai tutti i post non salvati in questo browser. Continuare?")) return;
+    const res = await forceDropboxLoad();
+    if (res.ok && res.data) {
+      const d = migrateWorkspaceData(res.data);
+      setProjects(d.projects || []);
+      setClients(d.clients || []);
+      if (d.activeId) setActiveId(d.activeId);
+      setDropboxLastSyncTime(Date.now());
+      alert("Database caricato da Dropbox con successo!");
+    } else {
+      alert("Errore durante il caricamento: " + (res.error || "Errore sconosciuto."));
+    }
+  }
+
+  async function handleDropboxForceSave() {
+    if (!window.confirm("Attenzione: caricando questo database su Dropbox sovrascriverai la copia presente sul cloud. Continuare?")) return;
+    const res = await forceDropboxSave({ projects, clients, activeId });
+    if (res.ok) {
+      setDropboxLastSyncTime(Date.now());
+      alert("Database inviato a Dropbox con successo!");
+    } else {
+      alert("Errore durante il salvataggio: " + (res.error || "Errore sconosciuto."));
+    }
+  }
 
   function handleSelect(id){
     setActiveId(id); setView("project"); pushUrl("project",id,{module:'overview'});
@@ -3993,6 +4117,17 @@ export default function App(){
 
         <div className="sb-bottom">
           <GlobalMetaConnect globalMeta={globalMeta} onMetaChange={handleMetaChange} clients={clients}/>
+          <GlobalDropboxConnect
+            syncConfig={dropboxSyncConfig}
+            onConnect={handleDropboxConnect}
+            onDisconnect={handleDropboxDisconnect}
+            onToggleActive={handleDropboxToggleActive}
+            onForceLoad={handleDropboxForceLoad}
+            onForceSave={handleDropboxForceSave}
+            syncStatus={dropboxSyncStatus}
+            syncError={dropboxSyncError}
+            lastSyncTime={dropboxLastSyncTime}
+          />
           <button className={`sb-planner-btn ${view==="approvals"?"active":""}`} onClick={()=>{ setView("approvals"); pushUrl("approvals"); }} style={{position:"relative"}}>
             ✅ Approvazioni
             {(()=>{ const n=projects.reduce((s,proj)=>{ const ed=proj.ed||{}; const fi=[...(ed.feedItems||[]),...(ed.contentItems||[])]; return s+fi.filter(f=>f.stato==="revisione"||f.stato==="semaforo").length; },0); return n>0?<span style={{position:"absolute",top:4,right:8,background:"var(--err)",color:"#fff",fontSize:9,fontWeight:800,padding:"1px 5px",borderRadius:99,minWidth:16,textAlign:"center"}}>{n}</span>:null; })()}
