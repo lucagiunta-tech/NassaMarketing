@@ -29,7 +29,12 @@ function resolveMediaUrls(post) {
 
 function isVideoUrl(url) {
   if (!url) return false;
-  return /\.(mp4|mov|webm|avi)(\?|$)/i.test(url) || url.includes("video");
+  const s = String(url).toLowerCase();
+  return /\.(mp4|mov|webm|avi|mkv|3gp|flv|wmv)(\?|$)/i.test(s) || 
+         s.includes("video") || 
+         s.startsWith("blob:") || 
+         s.includes("dropbox.com") || 
+         s.includes("drive.google.com");
 }
 
 // ─── CAROUSEL VIEWER ─────────────────────────────────────────────────────────

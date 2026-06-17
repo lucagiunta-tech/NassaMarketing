@@ -416,7 +416,7 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
   const safeIdx = Math.min(current, total - 1);
 
   return (
-    <div style={{ marginBottom: 10, borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)", background: "#000", position: "relative" }}>
+    <div style={{ width: "100%", overflow: "hidden", background: "#000", position: "relative" }}>
       {/* Main image display */}
       <div style={{ aspectRatio: "1/1", position: "relative", width: "100%" }}>
         <img
@@ -530,6 +530,51 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
   const fileInputChangeRef = useRef(null);
 
   function set(k,v){ setF(p=>({...p,[k]:v})); }
+  function handleTipoChange(newTipo) {
+    if (newTipo !== "reel" && newTipo !== "storia") {
+      setVidObjUrl("");
+    } else {
+      setVidObjUrl(f.videoUrl || "");
+    }
+    setF(p => {
+      let mediaObj = {};
+      if (newTipo === "carousel") {
+        const list = p.mediaUrls && p.mediaUrls.length > 0 ? p.mediaUrls : (p.immagineUrl ? [p.immagineUrl] : []);
+        mediaObj = {
+          mediaUrls: list,
+          immagini: list,
+          carouselMedia: list,
+          immagineUrl: list[0] || "",
+          immagineBase64: "",
+          videoUrl: ""
+        };
+      } else if (newTipo === "reel" || newTipo === "storia") {
+        mediaObj = {
+          mediaUrls: p.videoUrl ? [p.videoUrl] : [],
+          immagini: [],
+          carouselMedia: [],
+          immagineUrl: "",
+          immagineBase64: "",
+          videoUrl: p.videoUrl || ""
+        };
+      } else {
+        const img = p.immagineUrl || (p.mediaUrls && p.mediaUrls[0]) || "";
+        mediaObj = {
+          mediaUrls: img ? [img] : [],
+          immagini: img ? [img] : [],
+          carouselMedia: [],
+          immagineUrl: img,
+          immagineBase64: p.immagineBase64 || "",
+          videoUrl: ""
+        };
+      }
+      return {
+        ...p,
+        tipo: newTipo,
+        ...mediaObj
+      };
+    });
+  }
   function togglePiat(id){ const c=f.piattaforme||[]; set("piattaforme",c.includes(id)?c.filter(p=>p!==id):[...c,id]); }
   function toggleMember(id){ const c=f.membersAssigned||[]; set("membersAssigned",c.includes(id)?c.filter(m=>m!==id):[...c,id]); }
 
@@ -788,7 +833,7 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
             <div>
               <div className="pfm-label">Formato</div>
               <div className="pf-tabs">
-                {FEED_TIPI.map(t=><button key={t} className={`pf-tab ${f.tipo===t?"active":""}`} onClick={()=>set("tipo",t)}>{FEED_TIPI_ICON[t]} {FEED_TIPI_LABEL[t]}</button>)}
+                {FEED_TIPI.map(t=><button key={t} className={`pf-tab ${f.tipo===t?"active":""}`} onClick={()=>handleTipoChange(t)}>{FEED_TIPI_ICON[t]} {FEED_TIPI_LABEL[t]}</button>)}
               </div>
             </div>
             <div>
@@ -887,63 +932,91 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
             </button>
           </div>
 
-          {/* CAROUSEL GALLERY — IG-style arrow carousel */}
-          {isCarousel && carouselMedia.length > 0 && (
-            <CarouselEditorPreview
-              urls={carouselMedia}
-              onRemove={removeMedia}
-              onReorder={moveMedia}
-            />
-          )}
-
           {/* DROP ZONE */}
-          <div className={`pfm-media-zone ${dragOver?"pfm-media-dragover":""} ${previewSrc&&!isCarousel?"pfm-media-has":""}`}
+          <div className={`pfm-media-zone ${dragOver?"pfm-media-dragover":""} ${(isCarousel ? carouselMedia.length > 0 : previewSrc) ? "pfm-media-has" : ""}`}
             onDragOver={e=>{e.preventDefault();setDragOver(true);}}
             onDragLeave={()=>setDragOver(false)}
             onDrop={onDrop}>
-            {previewSrc&&!isCarousel?(
-              <div className="pfm-media-preview">
-                <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
-                <div className="pfm-media-overlay">
-                  <button type="button" className="pfm-media-change" onClick={()=>fileInputChangeRef.current?.click()}>📤 Cambia</button>
-                  {previewSrc && (
-                    <a href={previewSrc} target="_blank" rel="noreferrer" className="pfm-media-change" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔍 Zoom</a>
+            {isCarousel ? (
+              carouselMedia.length > 0 ? (
+                <CarouselEditorPreview
+                  urls={carouselMedia}
+                  onRemove={removeMedia}
+                  onReorder={moveMedia}
+                />
+              ) : (
+                <div className="pfm-media-empty">
+                  <div style={{fontSize:32,marginBottom:8}}>🖼️</div>
+                  <div style={{fontSize:12,color:"var(--ink3)",fontWeight:600,marginBottom:4}}>
+                    Trascina file per il carousel
+                  </div>
+                  <div style={{fontSize:11,color:"var(--ink5)",marginBottom:14}}>Trascina qui il file oppure</div>
+                  <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+                    <button type="button" className="btn-outline sm" style={{cursor:"pointer"}}
+                      onClick={()=>fileInputRef.current?.click()} disabled={imgLoading}>
+                      📤 Carica immagini
+                    </button>
+                    <span style={{fontSize:11,color:"var(--ink5)",alignSelf:"center"}}>o incolla URL</span>
+                  </div>
+                  <div style={{display:"flex",gap:6,marginTop:10,maxWidth:400,width:"100%"}}>
+                    <input className="inp" style={{flex:1,textAlign:"center"}}
+                      placeholder="URL Dropbox immagine (aggiungi una alla volta)"
+                      value={mediaUrlInput}
+                      onChange={e=>setMediaUrlInput(e.target.value)}
+                      onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addMediaUrl();}}}/>
+                    <button className="btn-primary sm" type="button" onClick={addMediaUrl} disabled={!mediaUrlInput.trim()}>+</button>
+                  </div>
+                </div>
+              )
+            ) : (
+              previewSrc ? (
+                <div className="pfm-media-preview">
+                  {isVideo && (f.videoUrl || vidObjUrl) ? (
+                    <video src={f.videoUrl || vidObjUrl} controls style={{ width: "100%", maxHeight: "300px", display: "block" }} />
+                  ) : (
+                    <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
                   )}
-                  <button className="pfm-media-remove" onClick={()=>{
-                    set("immagineBase64","");
-                    set("immagineUrl","");
-                    set("mediaUrls",[]);
-                    set("immagini",[]);
-                    set("carouselMedia",[]);
-                  }}>✕</button>
+                  <div className="pfm-media-overlay">
+                    <button type="button" className="pfm-media-change" onClick={()=>fileInputChangeRef.current?.click()}>📤 Cambia</button>
+                    {previewSrc && (
+                      <a href={previewSrc} target="_blank" rel="noreferrer" className="pfm-media-change" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔍 Zoom</a>
+                    )}
+                    <button className="pfm-media-remove" type="button" onClick={()=>{
+                      set("immagineBase64","");
+                      set("immagineUrl","");
+                      set("videoUrl","");
+                      setVidObjUrl("");
+                      set("mediaUrls",[]);
+                      set("immagini",[]);
+                      set("carouselMedia",[]);
+                    }}>✕</button>
+                  </div>
                 </div>
-              </div>
-            ):(
-              <div className="pfm-media-empty">
-                <div style={{fontSize:32,marginBottom:8}}>🖼️</div>
-                <div style={{fontSize:12,color:"var(--ink3)",fontWeight:600,marginBottom:4}}>
-                  {isCarousel?"Trascina file per il carousel":"Aggiungi immagini, video o PDF"}
+              ) : (
+                <div className="pfm-media-empty">
+                  <div style={{fontSize:32,marginBottom:8}}>🖼️</div>
+                  <div style={{fontSize:12,color:"var(--ink3)",fontWeight:600,marginBottom:4}}>
+                    Aggiungi immagini, video o PDF
+                  </div>
+                  <div style={{fontSize:11,color:"var(--ink5)",marginBottom:14}}>Trascina qui il file oppure</div>
+                  <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
+                    <button type="button" className="btn-outline sm" style={{cursor:"pointer"}}
+                      onClick={()=>fileInputRef.current?.click()} disabled={imgLoading}>
+                      📤 Carica media
+                    </button>
+                    <span style={{fontSize:11,color:"var(--ink5)",alignSelf:"center"}}>o incolla URL</span>
+                  </div>
+                  <div style={{display:"flex",gap:6,marginTop:10,maxWidth:400,width:"100%"}}>
+                    <input className="inp" style={{flex:1,textAlign:"center"}}
+                      placeholder="https://www.dropbox.com/... o URL pubblico"
+                      value={f.immagineUrl||""}
+                      onChange={e=>{set("immagineUrl",e.target.value);set("immagineBase64","");}}/>
+                  </div>
+                  {isVideo&&<input className="inp" style={{marginTop:8,maxWidth:380,textAlign:"center"}}
+                    placeholder="URL video / Reel (Dropbox, Drive…)" value={f.videoUrl&&!f.videoUrl.startsWith("blob:")?f.videoUrl:""}
+                    onChange={e=>{set("videoUrl",e.target.value);setVidObjUrl(e.target.value);}}/>}
                 </div>
-                <div style={{fontSize:11,color:"var(--ink5)",marginBottom:14}}>Trascina qui il file oppure</div>
-                <div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
-                  <button type="button" className="btn-outline sm" style={{cursor:"pointer"}}
-                    onClick={()=>fileInputRef.current?.click()} disabled={imgLoading}>
-                    📤 Carica {isCarousel?"immagini":"media"}
-                  </button>
-                  <span style={{fontSize:11,color:"var(--ink5)",alignSelf:"center"}}>o incolla URL</span>
-                </div>
-                <div style={{display:"flex",gap:6,marginTop:10,maxWidth:400,width:"100%"}}>
-                  <input className="inp" style={{flex:1,textAlign:"center"}}
-                    placeholder={isCarousel?"URL Dropbox immagine (aggiungi una alla volta)":"https://www.dropbox.com/... o URL pubblico"}
-                    value={isCarousel?mediaUrlInput:(f.immagineUrl||"")}
-                    onChange={isCarousel?e=>setMediaUrlInput(e.target.value):e=>{set("immagineUrl",e.target.value);set("immagineBase64","");}}
-                    onKeyDown={isCarousel?e=>{if(e.key==="Enter"){e.preventDefault();addMediaUrl();}}:undefined}/>
-                  {isCarousel&&<button className="btn-primary sm" onClick={addMediaUrl} disabled={!mediaUrlInput.trim()}>+</button>}
-                </div>
-                {isVideo&&<input className="inp" style={{marginTop:8,maxWidth:380,textAlign:"center"}}
-                  placeholder="URL video / Reel (Dropbox, Drive…)" value={f.videoUrl&&!f.videoUrl.startsWith("blob:")?f.videoUrl:""}
-                  onChange={e=>{set("videoUrl",e.target.value);setVidObjUrl(e.target.value);}}/>}
-              </div>
+              )
             )}
           </div>
           {imgLoading&&<div className="gen-row" style={{justifyContent:"center",padding:"8px 0"}}><div className="spin"/>Caricamento immagine…</div>}
