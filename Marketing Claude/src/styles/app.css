@@ -1004,7 +1004,7 @@
 .fpg-ig-name{font-size:13px;font-weight:700;color:#1A1A1A;margin-bottom:4px;}
 .fpg-ig-counts{display:flex;gap:12px;font-size:11px;color:#666;}
 .fpg-ig-counts span{display:flex;flex-direction:column;align-items:center;}
-.fpg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:#FAFAFA;}
+.fpg-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));gap:2px;background:#FAFAFA;}
 .fpg-cell{aspect-ratio:1;position:relative;cursor:pointer;overflow:hidden;background:var(--bg);transition:all .15s;}
 .fpg-cell:hover .fpg-drag-handle{opacity:1;}
 .fpg-cell:hover{opacity:.85;}
