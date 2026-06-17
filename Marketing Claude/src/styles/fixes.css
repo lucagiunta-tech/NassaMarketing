@@ -206,10 +206,49 @@ button, [role="button"] {
   transition: all .2s;
 }
 
-/* ── 16. Platform preview size constraint (centered mobile viewport) ── */
-.pp-container {
+/* ── 16. Platform preview size constraint & Flex Layout (centered mobile viewport) ── */
+.pp-container, .pp-container-grid {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+}
+
+.pp-previews-flex {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.pp-preview-column {
+  flex: 1 1 340px;
+  max-width: 380px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pp-preview-frame {
   max-width: 380px !important;
+  width: 100% !important;
   margin: 0 auto !important;
+}
+
+.pp-column-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-2);
+  text-align: center;
+  background: var(--bg-3);
+  padding: 6px 16px;
+  border-radius: 20px;
+  align-self: center;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
 }
 
 /* ── 17. Persistent media preview overlay (bottom docked bar) ── */

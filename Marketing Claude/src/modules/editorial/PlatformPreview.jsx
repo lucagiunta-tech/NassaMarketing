@@ -335,24 +335,15 @@ function LinkedInPreview({ post, projectName, avatarLetter }) {
 // ─── MAIN EXPORT ─────────────────────────────────────────────────────────────
 export default function PlatformPreview({ post, projectName, project }) {
   const platforms = post.piattaforme || ["instagram"];
-  const [activePlatform, setActivePlatform] = useState(platforms[0] || "instagram");
   const avatarLetter = (projectName || "N")[0].toUpperCase();
 
-  // Sync active platform if platforms change
-  useEffect(() => {
-    if (!platforms.includes(activePlatform)) {
-      setActivePlatform(platforms[0] || "instagram");
-    }
-  }, [platforms.join(",")]);
-
-  const renderPreview = () => {
-    switch (activePlatform) {
+  const renderSinglePreview = (platform) => {
+    switch (platform) {
       case "facebook":
         return <FacebookPreview post={post} projectName={projectName} avatarLetter={avatarLetter} />;
       case "linkedin":
         return <LinkedInPreview post={post} projectName={projectName} avatarLetter={avatarLetter} />;
       case "tiktok":
-        // TikTok uses same layout as IG reels
         return <InstagramPreview post={{...post, tipo: "reel"}} projectName={projectName} avatarLetter={avatarLetter} />;
       case "instagram":
       default:
@@ -360,37 +351,26 @@ export default function PlatformPreview({ post, projectName, project }) {
     }
   };
 
+  const displayPlatforms = platforms.length > 0 ? platforms : ["instagram"];
+
   return (
-    <div className="pp-container">
-      {/* Platform toggle — only show if multiple platforms */}
-      {platforms.length > 1 && (
-        <div className="pp-toggle-bar">
-          {platforms.map(p => (
-            <button
-              key={p}
-              className={`pp-toggle-btn ${activePlatform === p ? "active" : ""}`}
-              onClick={() => setActivePlatform(p)}
-            >
-              {PLATFORM_LABELS[p] || p}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Single platform indicator when no toggle needed */}
-      {platforms.length === 1 && (
-        <div className="pp-single-label">
-          {PLATFORM_LABELS[platforms[0]] || platforms[0]} Preview
-        </div>
-      )}
-
-      {/* Preview content */}
-      <div className="pp-preview-frame">
-        {renderPreview()}
+    <div className="pp-container-grid">
+      {/* Side-by-side previews list */}
+      <div className="pp-previews-flex">
+        {displayPlatforms.map(p => (
+          <div key={p} className="pp-preview-column">
+            <div className="pp-column-label">
+              {PLATFORM_LABELS[p] || p} Preview
+            </div>
+            <div className="pp-preview-frame">
+              {renderSinglePreview(p)}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Post meta info */}
-      <div className="pp-meta-bar">
+      <div className="pp-meta-bar" style={{ marginTop: 24 }}>
         <span className="pp-meta-type">
           {post.tipo === "carousel" ? "🎠 Carousel" : post.tipo === "reel" ? "🎬 Reel" : post.tipo === "storia" ? "📱 Storia" : "📷 Post"}
         </span>

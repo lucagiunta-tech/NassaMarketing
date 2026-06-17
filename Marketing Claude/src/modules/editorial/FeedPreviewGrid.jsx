@@ -9,6 +9,16 @@ import {
 import { PILASTRO_COLORS, getPillarColor } from "./editorialTheme";
 import PlatformPreview from "./PlatformPreview";
 
+function isVideoUrl(url) {
+  if (!url) return false;
+  const s = String(url).toLowerCase();
+  return /\.(mp4|mov|webm|avi|mkv|3gp|flv|wmv)(\?|$)/i.test(s) || 
+         s.includes("video") || 
+         s.startsWith("blob:") || 
+         s.includes("dropbox.com") || 
+         s.includes("drive.google.com");
+}
+
 export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
   const savedOrder = project.ed?.feedOrder || [];
   const [dragIdx, setDragIdx] = useState(null);
@@ -61,7 +71,8 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
   }
 
   const FeedCell = ({post, idx, aspect="1/1"}) => {
-    const src=post.immagineBase64||post.immagineUrl||"";
+    const src = post.immagineBase64 || post.immagineUrl || ((post.mediaUrls || [])[0]) || "";
+    const videoUrl = post.videoUrl || (src && isVideoUrl(src) ? src : "");
     const color=getPlaceholderColor(post);
     const st=getFeedStatusStyle(post.stato);
     const isDragging=dragIdx===idx;
@@ -72,11 +83,20 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
         onDragStart={e=>onDragStart(e,idx)} onDragOver={e=>onDragOver(e,idx)}
         onDrop={e=>onDrop(e,idx)} onDragEnd={onDragEnd}
         onClick={()=>onEdit(post)}>
-        {src
-          ? <img src={src} alt="" className="fpg-img" onError={e=>e.target.style.display="none"}/>
-          : <div className="fpg-placeholder" style={{background:color+"22",borderLeft:`3px solid ${color}`}}>
-              <div className="fpg-ph-label" style={{color}}>{post.titolo||post.pilastro||"Post"}</div>
-            </div>}
+        {videoUrl ? (
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            <video src={videoUrl} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} preload="metadata" muted playsInline />
+            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,.15)" }}>
+              <div style={{ width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,.85)", display: "flex", alignItems: "center", justifyContent: "center", color: "#000", fontSize: 12, boxShadow: "0 2px 6px rgba(0,0,0,.3)" }}>▶</div>
+            </div>
+          </div>
+        ) : src ? (
+          <img src={src} alt="" className="fpg-img" onError={e=>e.target.style.display="none"}/>
+        ) : (
+          <div className="fpg-placeholder" style={{background:color+"22",borderLeft:`3px solid ${color}`}}>
+            <div className="fpg-ph-label" style={{color}}>{post.titolo||post.pilastro||"Post"}</div>
+          </div>
+        )}
         <div className="fpg-drag-handle">⊕</div>
         <div className="fpg-status-dot" style={{background:st.tx}} title={st.label}/>
         {post.tipo&&post.tipo!=="post"&&<div className="fpg-type-badge">{FEED_TIPI_ICON[post.tipo]}</div>}
@@ -115,7 +135,8 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
           </div>
         )}
         {ordered.map(post=>{
-          const src=post.immagineBase64||post.immagineUrl||"";
+          const src = post.immagineBase64 || post.immagineUrl || ((post.mediaUrls || [])[0]) || "";
+          const videoUrl = post.videoUrl || (src && isVideoUrl(src) ? src : "");
           const st=getFeedStatusStyle(post.stato);
           const col=getPillarColor(post.pilastro, project?.pilastri);
           const isSelected = selectedPost?.id === post.id;
@@ -125,8 +146,13 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
               onClick={()=>handleListClick(post)}
               onDoubleClick={()=>onEdit(post)}>
               <div className="fpg-list-thumb" style={{background:col+"22",borderLeft:`3px solid ${col}`}}>
-                {src&&<img src={src} alt="" onError={e=>e.target.style.display="none"}/>}
-                {!src&&<span style={{fontSize:14}}>{FEED_TIPI_ICON[post.tipo]||"📄"}</span>}
+                {videoUrl ? (
+                  <video src={videoUrl} style={{ width: "100%", height: "100%", objectFit: "cover" }} preload="metadata" muted playsInline />
+                ) : src ? (
+                  <img src={src} alt="" onError={e=>e.target.style.display="none"}/>
+                ) : (
+                  <span style={{fontSize:14}}>{FEED_TIPI_ICON[post.tipo]||"📄"}</span>
+                )}
               </div>
               <div className="fpg-list-info">
                 <div className="fpg-list-title">{post.titolo||"Post senza titolo"}</div>
