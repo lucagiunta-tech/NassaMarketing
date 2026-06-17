@@ -823,6 +823,7 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
   const isCarousel=f.tipo==="carousel";
   const carouselMedia=f.mediaUrls||[];
   const isVideo=f.tipo==="reel"||f.tipo==="storia";
+  const isActualVideo=isVideo||isVideoUrl(previewSrc);
   const activeCaption=f.abActive?(f.captionB||""):(f.caption||"");
   const captionLen=activeCaption.length;
   const validation=validatePostFormItem(f);
@@ -1048,13 +1049,13 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
               )
             ) : (
               previewSrc ? (
-                <div className="pfm-media-preview" style={isVideo ? { aspectRatio: "9/16", height: "400px", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", borderRadius: 8, margin: "0 auto" } : {}}>
-                  {isVideo && (f.videoUrl || vidObjUrl) ? (
-                    <video src={f.videoUrl || vidObjUrl} controls style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+                <div className="pfm-media-preview" style={isActualVideo ? { aspectRatio: (f.tipo === "reel" || f.tipo === "storia") ? "9/16" : "1/1", height: "400px", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", overflow: "hidden", borderRadius: 8, margin: "0 auto" } : {}}>
+                  {isActualVideo ? (
+                    <video src={f.videoUrl || previewSrc} controls style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
                   ) : (
                     <img src={previewSrc} alt="" onError={e=>e.target.style.display="none"}/>
                   )}
-                  <div className="pfm-media-overlay" style={isVideo ? { top: 0, bottom: "auto", height: "40px" } : {}}>
+                  <div className="pfm-media-overlay" style={isActualVideo ? { top: 0, bottom: "auto", height: "40px" } : {}}>
                     <button type="button" className="pfm-media-change" onClick={()=>fileInputChangeRef.current?.click()}>📤 Cambia</button>
                     {previewSrc && (
                       <a href={previewSrc} target="_blank" rel="noreferrer" className="pfm-media-change" style={{textDecoration:"none",display:"inline-flex",alignItems:"center",justifyContent:"center"}}>🔍 Zoom</a>

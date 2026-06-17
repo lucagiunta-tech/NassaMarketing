@@ -252,6 +252,16 @@ button, [role="button"] {
 }
 
 /* ── 17. Persistent media preview overlay (bottom docked bar) ── */
+.pfm-media-zone {
+  flex-shrink: 0 !important;
+  height: auto !important;
+}
+
+.pfm-media-preview {
+  position: relative !important;
+  z-index: 1 !important;
+}
+
 .pfm-media-preview .pfm-media-overlay {
   position: absolute;
   top: auto;
@@ -267,6 +277,7 @@ button, [role="button"] {
   opacity: 1 !important;
   visibility: visible !important;
   transition: none;
+  z-index: 10 !important;
 }
 
 /* ── 18. Reels & Stories 3-column Layout overrides ── */

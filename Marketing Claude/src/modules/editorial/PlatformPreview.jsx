@@ -189,10 +189,15 @@ function InstagramPreview({ post, projectName, avatarLetter }) {
       ) : (
         /* Single post */
         <div style={{ aspectRatio: "1/1", width: "100%", background: "#000" }}>
-          {mediaUrls[0]
-            ? <img src={mediaUrls[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
-            : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#ccc", fontSize: 48 }}>🖼️</div>
-          }
+          {mediaUrls[0] ? (
+            isVideoUrl(mediaUrls[0]) ? (
+              <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
+            ) : (
+              <img src={mediaUrls[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+            )
+          ) : (
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#ccc", fontSize: 48 }}>🖼️</div>
+          )}
         </div>
       )}
 
@@ -261,10 +266,15 @@ function FacebookPreview({ post, projectName, avatarLetter }) {
         <CarouselViewer urls={mediaUrls} aspectRatio="auto" />
       ) : (
         <div style={{ width: "100%", background: "#000" }}>
-          {mediaUrls[0]
-            ? <img src={mediaUrls[0]} alt="" style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", margin: "0 auto" }} />
-            : <div style={{ aspectRatio: "1.91/1", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5", color: "#bbb", fontSize: 48 }}>🖼️</div>
-          }
+          {mediaUrls[0] ? (
+            isVideoUrl(mediaUrls[0]) ? (
+              <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
+            ) : (
+              <img src={mediaUrls[0]} alt="" style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", margin: "0 auto" }} />
+            )
+          ) : (
+            <div style={{ aspectRatio: "1.91/1", display: "flex", alignItems: "center", justifyContent: "center", background: "#f0f2f5", color: "#bbb", fontSize: 48 }}>🖼️</div>
+          )}
         </div>
       )}
 
@@ -313,10 +323,15 @@ function LinkedInPreview({ post, projectName, avatarLetter }) {
         <CarouselViewer urls={mediaUrls} aspectRatio="1/1" />
       ) : (
         <div style={{ width: "100%", background: "#f3f2ef" }}>
-          {mediaUrls[0]
-            ? <img src={mediaUrls[0]} alt="" style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", margin: "0 auto" }} />
-            : <div style={{ aspectRatio: "1.91/1", display: "flex", alignItems: "center", justifyContent: "center", background: "#f3f2ef", color: "#bbb", fontSize: 48 }}>🖼️</div>
-          }
+          {mediaUrls[0] ? (
+            isVideoUrl(mediaUrls[0]) ? (
+              <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
+            ) : (
+              <img src={mediaUrls[0]} alt="" style={{ width: "100%", maxHeight: 500, objectFit: "contain", display: "block", margin: "0 auto" }} />
+            )
+          ) : (
+            <div style={{ aspectRatio: "1.91/1", display: "flex", alignItems: "center", justifyContent: "center", background: "#f3f2ef", color: "#bbb", fontSize: 48 }}>🖼️</div>
+          )}
         </div>
       )}
 
