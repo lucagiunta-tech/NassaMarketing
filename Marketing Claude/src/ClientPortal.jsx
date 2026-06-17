@@ -1,4 +1,4 @@
-﻿// ClientPortal.jsx — Token-gated client-facing portal.
+// ClientPortal.jsx — Token-gated client-facing portal.
 // Route: /c/{clientId}/{token}
 // Shows: pending approvals, funnel view, meta insights.
 // No admin access.
@@ -9,6 +9,7 @@ import { validateClientToken } from "./utils/clientAuth.js";
 import { MetaInsightsPanel } from "./modules/editorial/MetaInsightsPanel.jsx";
 import { FunnelViewED } from "./modules/editorial/FunnelViewED.jsx";
 import { getEditorialPosts } from "./modules/editorial/editorialModel.js";
+import PlatformPreview from "./modules/editorial/PlatformPreview.jsx";
 
 const TABS = [
   { id: "approvals", label: "📋 Approvazioni" },
@@ -37,15 +38,15 @@ export default function ClientPortal({ clientId, token }) {
   useEffect(() => {
     (async () => {
     const ws = await safeLoadWorkspace();
-    if (!ws.ok) { setAuthErr("Impossibile caricare i dati."); return; }
+    if (!ws.ok || !ws.data) { setAuthErr("Impossibile caricare i dati."); return; }
 
-    const cl = (ws.clients || []).find((c) => c.id === clientId);
+    const cl = (ws.data.clients || []).find((c) => c.id === clientId);
     if (!cl) { setAuthErr("Cliente non trovato."); return; }
     if (!validateClientToken(cl, token)) {
       setAuthErr("Link non valido o scaduto. Richiedi un nuovo link all'agenzia.");
       return;
     }
-    const clientProjects = (ws.projects || []).filter((p) => p.clientId === clientId);
+    const clientProjects = (ws.data.projects || []).filter((p) => p.clientId === clientId);
     setClient(cl);
     setProjects(clientProjects);
     })();
@@ -68,23 +69,24 @@ export default function ClientPortal({ clientId, token }) {
 
   async function updatePostStatus(postId, projId, newStato, note = "") {
     const ws = await safeLoadWorkspace();
-    if (!ws.ok) { showToast("Errore salvataggio", "error"); return; }
+    if (!ws.ok || !ws.data) { showToast("Errore salvataggio", "error"); return; }
 
-    const projIdx = (ws.projects || []).findIndex((p) => p.id === projId);
+    const allProjects = ws.data.projects || [];
+    const projIdx = allProjects.findIndex((p) => p.id === projId);
     if (projIdx === -1) return;
 
-    const proj = ws.projects[projIdx];
+    const proj = allProjects[projIdx];
     const feed = (proj.ed?.feedItems || []).map((p) => {
       if (p.id !== postId) return p;
       return { ...p, stato: newStato, clientNote: note || p.clientNote, clientReviewedAt: new Date().toISOString() };
     });
 
-    ws.projects[projIdx] = { ...proj, ed: { ...(proj.ed || {}), feedItems: feed } };
+    allProjects[projIdx] = { ...proj, ed: { ...(proj.ed || {}), feedItems: feed } };
 
-    const saved = await safeSaveWorkspace(ws);
+    const saved = await safeSaveWorkspace({ ...ws.data, projects: allProjects });
     if (!saved.ok) { showToast("Errore durante il salvataggio", "error"); return; }
 
-    setProjects(ws.projects.filter((p) => p.clientId === clientId));
+    setProjects(allProjects.filter((p) => p.clientId === clientId));
     showToast(newStato === "approvato" ? "✅ Post approvato!" : "🔄 Richiesta modifiche inviata");
   }
 
@@ -206,13 +208,10 @@ function PostCard({ post, onApprove, onReject }) {
         )}
       </div>
 
-      {(post.immagineBase64 || post.immagineUrl) && (
-        <div style={{ aspectRatio: "1", overflow: "hidden", background: "#f3f4f6" }}>
-          <img src={post.immagineBase64 || post.immagineUrl} alt=""
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            onError={(e) => { e.target.style.display = "none"; }} />
-        </div>
-      )}
+      {/* Platform-specific preview */}
+      <div style={{ padding: "8px 12px" }}>
+        <PlatformPreview post={post} projectName={post._projName || "Brand"} />
+      </div>
 
       <div style={{ padding: "12px 16px", flex: 1 }}>
         <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#6b7280", marginBottom: 6 }}>

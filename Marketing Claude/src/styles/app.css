@@ -961,6 +961,7 @@
 .fpg-list-hdr{padding:12px 14px;font-size:12px;font-weight:700;color:var(--ink);border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--white);z-index:2;}
 .fpg-list-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;}
 .fpg-list-row:hover{background:var(--bg);}
+.fpg-list-row-selected{background:var(--gold-bg)!important;border-left:3px solid var(--gold);}
 .fpg-list-thumb{width:36px;height:36px;border-radius:4px;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;}
 .fpg-list-thumb img{width:100%;height:100%;object-fit:cover;}
 .fpg-list-info{flex:1;min-width:0;}
@@ -994,8 +995,8 @@
 .cal-split-stato{font-size:12px;flex-shrink:0;}
 .cal-split-cal{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 /* FEED PREVIEW GRID */
-.fpg-outer{display:flex;gap:24px;padding:24px 28px;flex:1;overflow:auto;align-items:flex-start;}
-.fpg-phone{background:#fff;border:1px solid var(--border);border-radius:16px;flex:1;min-width:300px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);}
+/* (removed duplicate - primary fpg-outer is at line 959) */
+.fpg-phone{background:#fff;border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);}
 .fpg-ig-hdr{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #EFEFEF;}
 .fpg-ig-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#E1306C,#F77737,#FCAF45);color:#fff;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .fpg-ig-meta{}
@@ -1072,8 +1073,8 @@
 .pfm-media-dragover{border-color:var(--gold);background:var(--gold-bg);}
 .pfm-media-has{border-style:solid;border-color:var(--border);}
 .pfm-media-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px 20px;text-align:center;}
-.pfm-media-preview{position:relative;width:100%;max-height:220px;overflow:hidden;}
-.pfm-media-preview img{width:100%;object-fit:cover;max-height:220px;display:block;}
+.pfm-media-preview{position:relative;width:100%;max-height:400px;overflow:hidden;background:#f0f0f0;border-radius:8px;}
+.pfm-media-preview img{width:100%;max-height:400px;object-fit:contain;display:block;}
 .pfm-media-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;gap:10px;opacity:0;transition:opacity .15s;}
 .pfm-media-preview:hover .pfm-media-overlay{opacity:1;}
 .pfm-media-change{padding:8px 16px;background:var(--white);border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;}
@@ -2438,4 +2439,105 @@
   .llist-table { font-size: 11px; }
   .llist-table thead th { padding: 8px 10px; font-size: 8px; }
   .llist-row td { padding: 8px 10px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PLATFORM PREVIEW — IG / FB / LinkedIn mockup styles
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Container */
+.pp-container{width:100%;max-width:480px;margin:0 auto;}
+
+/* Toggle bar */
+.pp-toggle-bar{display:flex;gap:0;background:#f8f9fa;border-radius:10px;padding:3px;margin-bottom:12px;}
+.pp-toggle-btn{flex:1;border:none;background:none;padding:8px 6px;font-size:11px;font-weight:600;color:#64748b;cursor:pointer;border-radius:8px;transition:all .2s;}
+.pp-toggle-btn.active{background:#fff;color:#111;box-shadow:0 1px 4px rgba(0,0,0,.1);}
+.pp-toggle-btn:hover:not(.active){color:#333;}
+
+/* Single platform label */
+.pp-single-label{font-size:10px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;text-align:center;}
+
+/* Preview frame */
+.pp-preview-frame{background:#fff;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.08);}
+
+/* Meta bar */
+.pp-meta-bar{display:flex;align-items:center;gap:10px;padding:8px 4px;margin-top:8px;font-size:10px;color:#64748b;justify-content:center;flex-wrap:wrap;}
+.pp-meta-type{font-weight:600;color:#334155;}
+.pp-meta-date{color:#64748b;}
+.pp-meta-status{font-weight:700;text-transform:capitalize;}
+
+/* ─── CAROUSEL ─────────────────────────────────────────────────────────────── */
+.pp-carousel-arrow{position:absolute;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.9);border:none;font-size:18px;font-weight:700;color:#333;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:3;transition:all .15s;}
+.pp-carousel-arrow:hover{background:#fff;transform:translateY(-50%) scale(1.1);}
+.pp-carousel-left{left:8px;}
+.pp-carousel-right{right:8px;}
+.pp-carousel-dots{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:3;}
+.pp-carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);cursor:pointer;transition:all .15s;}
+.pp-carousel-dot.active{background:#fff;transform:scale(1.3);}
+.pp-carousel-counter{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:99px;z-index:3;}
+
+/* ─── VIDEO PLAYER ─────────────────────────────────────────────────────────── */
+.pp-video-play-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.25);cursor:pointer;}
+.pp-video-play-btn{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:center;font-size:22px;color:#333;box-shadow:0 4px 16px rgba(0,0,0,.3);}
+.pp-video-controls{position:absolute;bottom:12px;right:12px;z-index:3;}
+.pp-video-mute{width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.5);border:none;color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+
+/* ─── INSTAGRAM STYLES ─────────────────────────────────────────────────────── */
+.pp-ig{background:#fff;}
+.pp-ig-header{display:flex;align-items:center;gap:10px;padding:10px 14px;}
+.pp-ig-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#E1306C,#F77737,#FCAF45);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pp-ig-user{flex:1;min-width:0;}
+.pp-ig-username{font-size:13px;font-weight:700;color:#1a1a1a;}
+.pp-ig-location{font-size:10px;color:#666;margin-top:1px;}
+.pp-ig-more{font-size:16px;color:#666;cursor:pointer;}
+.pp-ig-actions{display:flex;justify-content:space-between;padding:10px 14px;font-size:20px;}
+.pp-ig-actions-left{display:flex;gap:14px;}
+.pp-ig-caption{padding:0 14px 4px;font-size:12px;line-height:1.5;color:#262626;}
+.pp-ig-caption-user{font-weight:700;}
+.pp-ig-hashtags{padding:0 14px 12px;font-size:11px;color:#00376b;line-height:1.5;}
+
+/* IG Story */
+.pp-ig-story-frame{position:relative;background:#000;border-radius:0;}
+.pp-ig-story-header{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:8px;padding:12px 14px;z-index:4;background:linear-gradient(to bottom,rgba(0,0,0,.4),transparent);}
+.pp-ig-story-user{font-size:12px;font-weight:700;color:#fff;}
+.pp-ig-story-time{font-size:10px;color:rgba(255,255,255,.7);}
+
+/* IG Reel */
+.pp-ig-reel-frame{position:relative;background:#000;overflow:hidden;}
+.pp-reel-icon{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.5);color:#fff;font-size:14px;padding:4px 8px;border-radius:4px;z-index:3;}
+
+/* ─── FACEBOOK STYLES ──────────────────────────────────────────────────────── */
+.pp-fb{background:#fff;}
+.pp-fb-header{display:flex;align-items:center;gap:10px;padding:12px 14px;}
+.pp-fb-avatar{width:40px;height:40px;border-radius:50%;background:#1877F2;color:#fff;font-size:16px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pp-fb-user{flex:1;min-width:0;}
+.pp-fb-name{font-size:14px;font-weight:700;color:#050505;}
+.pp-fb-time{font-size:11px;color:#65676b;margin-top:1px;}
+.pp-fb-more{font-size:16px;color:#65676b;cursor:pointer;}
+.pp-fb-text{padding:0 14px 10px;font-size:13px;line-height:1.5;color:#050505;}
+.pp-fb-reel{max-height:500px;overflow:hidden;}
+.pp-fb-reactions{display:flex;justify-content:space-between;padding:8px 14px;border-top:1px solid #e4e6eb;font-size:11px;color:#65676b;}
+.pp-fb-reactions-left{display:flex;gap:2px;}
+.pp-fb-action-bar{display:flex;border-top:1px solid #e4e6eb;padding:2px 8px;}
+.pp-fb-action{flex:1;border:none;background:none;padding:8px;font-size:12px;font-weight:600;color:#65676b;cursor:pointer;border-radius:4px;transition:background .15s;}
+.pp-fb-action:hover{background:#f0f2f5;}
+
+/* ─── LINKEDIN STYLES ──────────────────────────────────────────────────────── */
+.pp-li{background:#fff;}
+.pp-li-header{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;}
+.pp-li-avatar{width:48px;height:48px;border-radius:50%;background:#0A66C2;color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.pp-li-user{flex:1;min-width:0;}
+.pp-li-name{font-size:14px;font-weight:700;color:#000000e6;}
+.pp-li-headline{font-size:11px;color:#00000099;margin-top:2px;line-height:1.3;}
+.pp-li-follow{border:none;background:none;color:#0A66C2;font-size:13px;font-weight:700;cursor:pointer;padding:4px 8px;}
+.pp-li-text{padding:0 14px 10px;font-size:13px;line-height:1.5;color:#000000e6;}
+.pp-li-engagement{display:flex;justify-content:space-between;padding:8px 14px;border-top:1px solid #e0e0e0;font-size:11px;color:#00000099;}
+.pp-li-actions{display:flex;border-top:1px solid #e0e0e0;padding:2px 4px;}
+.pp-li-action{flex:1;border:none;background:none;padding:10px 4px;font-size:11px;font-weight:600;color:#00000099;cursor:pointer;border-radius:4px;transition:background .15s;}
+.pp-li-action:hover{background:#f3f2ef;}
+
+/* ─── RESPONSIVE ───────────────────────────────────────────────────────────── */
+@media(max-width:768px){
+  .pp-container{max-width:100%;}
+  .pp-toggle-btn{font-size:10px;padding:6px 4px;}
 }
