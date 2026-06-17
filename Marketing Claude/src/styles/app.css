@@ -968,8 +968,9 @@
 .fpg-list-title{font-size:11px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .fpg-list-meta{font-size:9px;color:var(--ink5);margin-top:2px;display:flex;gap:5px;flex-wrap:wrap;}
 .fpg-list-stato{font-size:12px;flex-shrink:0;}
-.fpg-right{flex:1;display:flex;flex-direction:column;overflow:auto;align-items:center;padding:20px;gap:12px;background:var(--bg);}
-.fpg-reset-row{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:340px;flex-wrap:wrap;gap:8px;}
+.fpg-right{flex:1;display:flex;flex-direction:column;overflow:auto;padding:16px 20px;gap:12px;background:var(--bg);}
+.fpg-phone-wrap{width:100%;display:flex;flex-direction:column;align-items:center;}
+.fpg-reset-row{display:flex;justify-content:space-between;align-items:center;width:100%;flex-wrap:wrap;gap:8px;}
 /* Sub-tabs */
 .fpg-subtabs{display:flex;border-bottom:1px solid #EFEFEF;background:#fff;}
 .fpg-subtab{flex:1;padding:8px 4px;border:none;background:none;font-size:10px;font-weight:600;color:#9CA3AF;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:4px;}
@@ -996,7 +997,7 @@
 .cal-split-cal{flex:1;overflow:hidden;display:flex;flex-direction:column;}
 /* FEED PREVIEW GRID */
 /* (removed duplicate - primary fpg-outer is at line 959) */
-.fpg-phone{background:#fff;border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);}
+.fpg-phone{background:#fff;border:1px solid var(--border);border-radius:16px;width:100%;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.12);}
 .fpg-ig-hdr{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid #EFEFEF;}
 .fpg-ig-avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#E1306C,#F77737,#FCAF45);color:#fff;font-size:20px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .fpg-ig-meta{}
@@ -2446,7 +2447,7 @@
    ═══════════════════════════════════════════════════════════════════════════════ */
 
 /* Container */
-.pp-container{width:100%;max-width:480px;margin:0 auto;}
+.pp-container{width:100%;}
 
 /* Toggle bar */
 .pp-toggle-bar{display:flex;gap:0;background:#f8f9fa;border-radius:10px;padding:3px;margin-bottom:12px;}

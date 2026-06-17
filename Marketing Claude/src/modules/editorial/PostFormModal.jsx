@@ -405,9 +405,88 @@ export function PostValidationSummary({ validation }) {
   );
 }
 
+// ─── CAROUSEL EDITOR PREVIEW ─────────────────────────────────────────────────
+// IG-style carousel for the upload form with arrow navigation + remove button
+function CarouselEditorPreview({ urls, onRemove }) {
+  const [current, setCurrent] = useState(0);
+  const total = urls.length;
+
+  // Keep current in bounds when items removed
+  const safeIdx = Math.min(current, total - 1);
+
+  return (
+    <div style={{ marginBottom: 10, borderRadius: 10, overflow: "hidden", border: "1px solid var(--border)", background: "#000", position: "relative" }}>
+      {/* Main image display */}
+      <div style={{ aspectRatio: "1/1", position: "relative", width: "100%" }}>
+        <img
+          src={urls[safeIdx]}
+          alt={`Slide ${safeIdx + 1}`}
+          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+          onError={e => e.target.style.display = "none"}
+        />
+        {/* Remove current image */}
+        <button
+          onClick={() => { onRemove(safeIdx); setCurrent(Math.max(0, safeIdx - 1)); }}
+          style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4 }}
+          title="Rimuovi immagine"
+        >✕</button>
+        {/* Counter */}
+        <div style={{ position: "absolute", top: 8, left: 8, background: "rgba(0,0,0,.6)", color: "#fff", fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 99, zIndex: 4 }}>
+          {safeIdx + 1} / {total}
+        </div>
+        {/* Left arrow */}
+        {safeIdx > 0 && (
+          <button onClick={() => setCurrent(c => c - 1)}
+            style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,.9)", border: "none", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, boxShadow: "0 2px 8px rgba(0,0,0,.2)" }}>
+            ‹
+          </button>
+        )}
+        {/* Right arrow */}
+        {safeIdx < total - 1 && (
+          <button onClick={() => setCurrent(c => c + 1)}
+            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,.9)", border: "none", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, boxShadow: "0 2px 8px rgba(0,0,0,.2)" }}>
+            ›
+          </button>
+        )}
+      </div>
+      {/* Dots + thumbnail strip */}
+      <div style={{ background: "#111", padding: "8px 12px", display: "flex", gap: 6, alignItems: "center", overflowX: "auto" }}>
+        {urls.map((url, i) => (
+          <div key={i} onClick={() => setCurrent(i)}
+            style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 4, overflow: "hidden", cursor: "pointer", border: i === safeIdx ? "2px solid #fff" : "2px solid transparent", opacity: i === safeIdx ? 1 : 0.5, transition: "all .15s" }}>
+            <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── POST FORM MODAL ─────────────────────────────────────────────────────────
+// Normalize any date to ISO YYYY-MM-DD format on load
+function normalizeDateToISO(dateStr) {
+  if (!dateStr) return "";
+  const s = String(dateStr).trim();
+  // Already ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // DD/MM/YYYY or D/M/YYYY
+  const dmyMatch = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (dmyMatch) {
+    const [, d, m, y] = dmyMatch;
+    return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  // MM/DD/YYYY (US)
+  const mdyMatch = s.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{2,4})$/);
+  if (mdyMatch) {
+    const [, m, d, y] = mdyMatch;
+    const year = y.length === 2 ? '20' + y : y;
+    return `${year}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+  }
+  return s;
+}
+
 export function PostFormModal({ item, members, onSave, onDelete, onClose, pilastri=[], project=null }) {
-  const [f, setF] = useState({ piattaforme:["instagram"], membersAssigned:[], comments:[], mediaUrls:[], ...item });
+  const [f, setF] = useState({ piattaforme:["instagram"], membersAssigned:[], comments:[], mediaUrls:[], ...item, data: normalizeDateToISO(item.data) });
   const [imgLoading, setImgLoading] = useState(false);
   const [vidObjUrl,  setVidObjUrl]  = useState(item.videoUrl||"");
   const [aiCaption,  setAiCaption]  = useState(false);
@@ -645,17 +724,12 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
             </button>
           </div>
 
-          {/* CAROUSEL GALLERY */}
-          {isCarousel&&carouselMedia.length>0&&(
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",gap:6,marginBottom:10}}>
-              {carouselMedia.map((url,i)=>(
-                <div key={i} style={{position:"relative",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:"1px solid var(--border)",background:"var(--bg)"}}>
-                  <img src={url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}} onError={e=>e.target.style.display="none"}/>
-                  <button onClick={()=>removeMedia(i)} style={{position:"absolute",top:2,right:2,width:18,height:18,borderRadius:"50%",background:"rgba(0,0,0,.6)",color:"#fff",border:"none",fontSize:10,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
-                  <div style={{position:"absolute",bottom:2,left:2,fontSize:9,fontWeight:700,background:"rgba(0,0,0,.5)",color:"#fff",padding:"1px 5px",borderRadius:3}}>{i+1}</div>
-                </div>
-              ))}
-            </div>
+          {/* CAROUSEL GALLERY — IG-style arrow carousel */}
+          {isCarousel && carouselMedia.length > 0 && (
+            <CarouselEditorPreview
+              urls={carouselMedia}
+              onRemove={removeMedia}
+            />
           )}
 
           {/* DROP ZONE */}

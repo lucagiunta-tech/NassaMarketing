@@ -145,7 +145,7 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
       <div className="fpg-right">
         {selectedPost ? (
           /* PLATFORM PREVIEW — when a post is selected */
-          <div style={{width:"100%",maxWidth:480}}>
+          <div style={{width:"100%"}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
               <div style={{fontSize:13,fontWeight:700,color:"var(--ink)"}}>
                 Anteprima: {selectedPost.titolo || "Post"}

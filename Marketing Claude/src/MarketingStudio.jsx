@@ -3687,6 +3687,16 @@ export default function App(){
           const _match = cs.find(c=>clientSlug(c.nome)===_urlPortal||c.id===_urlPortal);
           if(_match){ setActiveClientId(_match.id); setView("portal"); }
         }
+        // URL routing — restore view from URL (must happen LAST so it overrides defaults)
+        const _initUrl = parseCurrentUrl();
+        if (_initUrl.view === 'approvals' || _initUrl.view === 'globalcal' || _initUrl.view === 'planner') {
+          setView(_initUrl.view);
+        } else if (_initUrl.view === 'client' && _initUrl.id && cs.find(c => c.id === _initUrl.id)) {
+          setActiveClientId(_initUrl.id); setView('client');
+        } else if (_initUrl.view === 'project' && _initUrl.id) {
+          const _pr = ps.find(p => p.id === _initUrl.id);
+          if (_pr) { setActiveId(_initUrl.id); setView('project'); if(_pr.clientId) setActiveClientId(_pr.clientId); }
+        }
       } else {
         const {client:k,project:kp}=createKosmetikal();
         const {client:r,project:rp}=createCoopRadenza();
@@ -3695,20 +3705,15 @@ export default function App(){
         setActiveId(kp.id); setActiveClientId(k.id);
         setExpandedClients([k.id,r.id]);
         saveWorkspaceState({projects:initP,clients:initC,activeId:kp.id});
-        setView("project");
+        // URL routing for fresh workspace (simple views only)
+        const _initUrl2 = parseCurrentUrl();
+        if (_initUrl2.view === 'approvals' || _initUrl2.view === 'globalcal' || _initUrl2.view === 'planner') {
+          setView(_initUrl2.view);
+        } else {
+          setView("project");
+        }
       }
       setLoaded(true);
-      // Parse URL on initial load
-      const initUrl=parseCurrentUrl();
-      if(initUrl.view==='approvals'||initUrl.view==='globalcal'||initUrl.view==='planner'){
-        setView(initUrl.view);
-      } else if(initUrl.view==='client'&&initUrl.id&&cs.find(c=>c.id===initUrl.id)){
-        setActiveClientId(initUrl.id); setView('client');
-      } else if(initUrl.view==='project'&&initUrl.id&&ps.find(p=>p.id===initUrl.id)){
-        setActiveId(initUrl.id); setView('project');
-        const pr=ps.find(p=>p.id===initUrl.id);
-        if(pr?.clientId) setActiveClientId(pr.clientId);
-      }
       // Urgency scan — post with date ≤ now+48h still in bozza/revisione
       const now=new Date(); const cutoff=new Date(now.getTime()+48*3600000);
       const urgencyProjects = (d?.projects || projects || []).map(migrateProjectData);
