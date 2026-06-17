@@ -97,14 +97,18 @@ function CarouselViewer({ urls, aspectRatio = "1/1" }) {
 // ─── VIDEO PLAYER ────────────────────────────────────────────────────────────
 function VideoPlayer({ src, aspectRatio = "9/16" }) {
   const videoRef = useRef(null);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [canPlay, setCanPlay] = useState(false);
 
   function togglePlay() {
     if (!videoRef.current) return;
-    if (playing) videoRef.current.pause();
-    else videoRef.current.play().catch(() => {});
-    setPlaying(!playing);
+    if (playing) {
+      videoRef.current.pause();
+      setPlaying(false);
+    } else {
+      videoRef.current.play().catch(() => {});
+      setPlaying(true);
+    }
   }
 
   return (
@@ -119,17 +123,19 @@ function VideoPlayer({ src, aspectRatio = "9/16" }) {
           onPlay={() => setPlaying(true)}
           onPause={() => setPlaying(false)}
           onEnded={() => setPlaying(false)}
+          autoPlay
+          muted
           playsInline
           loop
         />
       </div>
       {!playing && (
-        <div className="pp-video-play-overlay">
+        <div className="pp-video-play-overlay" style={{ zIndex: 10 }}>
           <div className="pp-video-play-btn">▶</div>
         </div>
       )}
       {canPlay && playing && (
-        <div className="pp-video-controls">
+        <div className="pp-video-controls" style={{ zIndex: 11 }}>
           <button onClick={e => { e.stopPropagation(); if(videoRef.current) videoRef.current.muted = !videoRef.current.muted; }}
             className="pp-video-mute">
             {videoRef.current?.muted ? "🔇" : "🔊"}
@@ -192,15 +198,15 @@ function InstagramPreview({ post, projectName, avatarLetter }) {
         <CarouselViewer urls={mediaUrls} aspectRatio="1/1" />
       ) : (
         /* Single post */
-        <div style={{ aspectRatio: "1/1", width: "100%", background: "#000" }}>
+        <div style={{ width: "100%", background: "#fff", display: "block" }}>
           {mediaUrls[0] ? (
             isVideoUrl(mediaUrls[0]) ? (
               <VideoPlayer src={mediaUrls[0]} aspectRatio="1/1" />
             ) : (
-              <img src={mediaUrls[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
+              <img src={mediaUrls[0]} alt="" style={{ width: "100%", height: "auto", display: "block" }} />
             )
           ) : (
-            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#ccc", fontSize: 48 }}>🖼️</div>
+            <div style={{ aspectRatio: "1/1", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f5", color: "#ccc", fontSize: 48 }}>🖼️</div>
           )}
         </div>
       )}
