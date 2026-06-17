@@ -30,6 +30,9 @@ function resolveMediaUrls(post) {
 function isVideoUrl(url) {
   if (!url) return false;
   const s = String(url).toLowerCase();
+  if (/\.(png|jpg|jpeg|gif|webp|tiff|bmp|svg)(\?|$)/i.test(s)) {
+    return false;
+  }
   return /\.(mp4|mov|webm|avi|mkv|3gp|flv|wmv)(\?|$)/i.test(s) || 
          s.includes("video") || 
          s.startsWith("blob:") || 
