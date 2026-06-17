@@ -8,6 +8,7 @@ import {
 } from "./editorialModel";
 import { PILASTRO_COLORS, getPillarColor } from "./editorialTheme";
 import PlatformPreview from "./PlatformPreview";
+import { fixMediaUrl } from "../../utils/dropbox";
 
 function isVideoUrl(url) {
   if (!url) return false;
@@ -75,8 +76,8 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
   }
 
   const FeedCell = ({post, idx, aspect="1/1"}) => {
-    const src = post.immagineBase64 || post.immagineUrl || ((post.mediaUrls || [])[0]) || "";
-    const videoUrl = post.videoUrl || (src && isVideoUrl(src) ? src : "");
+    const src = post.immagineBase64 || fixMediaUrl(post.immagineUrl) || (post.mediaUrls && post.mediaUrls[0] ? fixMediaUrl(post.mediaUrls[0]) : "") || "";
+    const videoUrl = fixMediaUrl(post.videoUrl) || (src && isVideoUrl(src) ? src : "");
     const color=getPlaceholderColor(post);
     const st=getFeedStatusStyle(post.stato);
     const isDragging=dragIdx===idx;
@@ -139,8 +140,8 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
           </div>
         )}
         {ordered.map(post=>{
-          const src = post.immagineBase64 || post.immagineUrl || ((post.mediaUrls || [])[0]) || "";
-          const videoUrl = post.videoUrl || (src && isVideoUrl(src) ? src : "");
+          const src = post.immagineBase64 || fixMediaUrl(post.immagineUrl) || (post.mediaUrls && post.mediaUrls[0] ? fixMediaUrl(post.mediaUrls[0]) : "") || "";
+          const videoUrl = fixMediaUrl(post.videoUrl) || (src && isVideoUrl(src) ? src : "");
           const st=getFeedStatusStyle(post.stato);
           const col=getPillarColor(post.pilastro, project?.pilastri);
           const isSelected = selectedPost?.id === post.id;

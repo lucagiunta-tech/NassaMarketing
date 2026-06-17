@@ -2,6 +2,7 @@
 // Shows how the post will look on each selected platform with correct aspect ratios.
 
 import { useState, useRef, useEffect } from "react";
+import { fixMediaUrl } from "../../utils/dropbox";
 
 // ─── ASPECT RATIOS PER PLATFORM ──────────────────────────────────────────────
 const PLATFORM_RATIOS = {
@@ -20,9 +21,9 @@ const PLATFORM_LABELS = {
 function resolveMediaUrls(post) {
   const urls = [];
   if (post.immagineBase64) urls.push(post.immagineBase64);
-  else if (post.immagineUrl) urls.push(post.immagineUrl);
-  if (post.carouselMedia?.length) urls.push(...post.carouselMedia);
-  if (post.videoUrl) urls.push(post.videoUrl);
+  else if (post.immagineUrl) urls.push(fixMediaUrl(post.immagineUrl));
+  if (post.carouselMedia?.length) urls.push(...post.carouselMedia.map(fixMediaUrl));
+  if (post.videoUrl) urls.push(fixMediaUrl(post.videoUrl));
   // Remove duplicates
   return [...new Set(urls)].filter(Boolean);
 }

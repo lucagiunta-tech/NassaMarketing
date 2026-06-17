@@ -10,10 +10,19 @@ export function fixMediaUrl(url) {
     let u = url
       .replace("www.dropbox.com", "dl.dropboxusercontent.com")
       .replace("dl.dropbox.com", "dl.dropboxusercontent.com");
-    u = u.replace(/[?&]dl=[01]/g, m => m[0]);
-    u = u.replace(/[?&]raw=1/g, m => m[0]);
-    u = u + (u.includes("?") ? "&raw=1" : "?raw=1");
-    return u;
+    try {
+      const urlObj = new URL(u);
+      urlObj.searchParams.delete("dl");
+      urlObj.searchParams.set("raw", "1");
+      return urlObj.toString();
+    } catch (e) {
+      // Fallback regex in case of malformed URLs
+      u = u.replace(/[?&]dl=[01]/g, "");
+      u = u.replace(/[?&]raw=1/g, "");
+      u = u.replace(/&&+/g, "&");
+      u = u + (u.includes("?") ? "&raw=1" : "?raw=1");
+      return u;
+    }
   }
   return url;
 }

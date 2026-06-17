@@ -562,21 +562,29 @@ function normalizeDateToISO(dateStr) {
 
 export function PostFormModal({ item, members, onSave, onDelete, onClose, pilastri=[], project=null }) {
   const clientName = project?.name || project?.interview?.nome || "DefaultClient";
-  const initialMedia = item.mediaUrls || item.immagini || item.carouselMedia || [];
+  const normalizedItem = {
+    ...item,
+    immagineUrl: fixMediaUrl(item.immagineUrl),
+    videoUrl: fixMediaUrl(item.videoUrl),
+    mediaUrls: (item.mediaUrls || []).map(fixMediaUrl),
+    immagini: (item.immagini || []).map(fixMediaUrl),
+    carouselMedia: (item.carouselMedia || []).map(fixMediaUrl),
+  };
+  const initialMedia = normalizedItem.mediaUrls || normalizedItem.immagini || normalizedItem.carouselMedia || [];
   
   const [f, setF] = useState({
     piattaforme: ["instagram"],
     membersAssigned: [],
     comments: [],
-    ...item,
+    ...normalizedItem,
     mediaUrls: initialMedia,
     immagini: initialMedia,
     carouselMedia: initialMedia,
-    data: normalizeDateToISO(item.data)
+    data: normalizeDateToISO(normalizedItem.data)
   });
   const [imgLoading, setImgLoading] = useState(false);
   const [uploadController, setUploadController] = useState(null);
-  const [vidObjUrl,  setVidObjUrl]  = useState(item.videoUrl||"");
+  const [vidObjUrl,  setVidObjUrl]  = useState(normalizedItem.videoUrl||"");
   const [aiCaption,  setAiCaption]  = useState(false);
 
   function cancelUpload() {
@@ -1092,11 +1100,11 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
                     <input className="inp" style={{flex:1,textAlign:"center"}}
                       placeholder="https://www.dropbox.com/... o URL pubblico"
                       value={f.immagineUrl||""}
-                      onChange={e=>{set("immagineUrl",e.target.value);set("immagineBase64","");}}/>
+                      onChange={e=>{set("immagineUrl",fixMediaUrl(e.target.value));set("immagineBase64","");}}/>
                   </div>
                   {isVideo&&<input className="inp" style={{marginTop:8,maxWidth:380,textAlign:"center"}}
                     placeholder="URL video / Reel (Dropbox, Drive…)" value={f.videoUrl&&!f.videoUrl.startsWith("blob:")?f.videoUrl:""}
-                    onChange={e=>{set("videoUrl",e.target.value);setVidObjUrl(e.target.value);}}/>}
+                    onChange={e=>{const val=fixMediaUrl(e.target.value);set("videoUrl",val);setVidObjUrl(val);}}/>}
                 </div>
               )
             )}
