@@ -2934,7 +2934,7 @@ Struttura JSON richiesta:
 {"nome":"","settore":"","anno":"","sede":"","sito":"","descrizione":"","differenziale":"","valori":"","target":"","b2x":"","mercati":"","prodotti":"","pricing":"","competitor":"","diff_competitor":"","canali_attuali":"","advertising":"","obiettivo1":"","obiettivo2":"","budget":"","problema":"","cosa_non_funziona":"","team":"","risorse":"","note":""}
 
 TESTO DA ANALIZZARE:
-${text.slice(0,5000)}`;
+${text}`;
 
 function ReviewForm({data,onComplete,onBack}){
   const [f,setF]=useState({...data});
@@ -3093,9 +3093,10 @@ function WizardView({onComplete}){
   if(mode==="brief") return <BriefExtractor onComplete={onComplete} onBack={()=>setMode(null)}/>;
   if(mode==="drive") return <DriveExtractor onComplete={onComplete} onBack={()=>setMode(null)}/>;
   if(mode==="manuale") return <ManualWizard onComplete={onComplete} onBack={()=>setMode(null)}/>;
+  if(mode==="senza-ai") return <ReviewForm data={{}} onComplete={onComplete} onBack={()=>setMode(null)}/>;
   return(
     <div className="wiz-wrap">
-      <div className="wiz-inner">
+      <div className="wiz-inner wiz-wide">
         <div className="wiz-brand">NASSA MARKETING STUDIO</div>
         <div className="wiz-title">Nuovo progetto</div>
         <div style={{fontSize:12,color:"var(--ink4)",marginBottom:28,textAlign:"center"}}>Come vuoi inserire le informazioni del progetto?</div>
@@ -3107,8 +3108,13 @@ function WizardView({onComplete}){
           </div>
           <div className="wiz-mode-card" onClick={()=>setMode("brief")}>
             <div className="wiz-mode-icon">✦</div>
-            <div className="wiz-mode-title">Incolla un brief</div>
+            <div className="wiz-mode-title">Incolla un brief (Con AI)</div>
             <div className="wiz-mode-desc">Incolla testo libero — email, appunti, documento, trascrizione intervista. L'AI estrae tutte le informazioni.</div>
+          </div>
+          <div className="wiz-mode-card" onClick={()=>setMode("senza-ai")}>
+            <div className="wiz-mode-icon">📋</div>
+            <div className="wiz-mode-title">Incolla brief (Senza AI)</div>
+            <div className="wiz-mode-desc">Compila o copia-incolla le informazioni del progetto direttamente in un'unica schermata, senza AI.</div>
           </div>
           <div className="wiz-mode-card" onClick={()=>setMode("drive")}>
             <div className="wiz-mode-icon">🔗</div>
