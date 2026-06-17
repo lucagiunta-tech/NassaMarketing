@@ -26,7 +26,8 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
   const [feedTab, setFeedTab] = useState("grid"); // grid | reels | stories
   const [filterStato,    setFilterStato]    = useState("tutti");
   const [filterPilastro, setFilterPilastro] = useState("tutti");
-  const [selectedPost, setSelectedPost] = useState(null); // for platform preview
+  const [selectedPostId, setSelectedPostId] = useState(null);
+  const selectedPost = feedItems.find(f => f.id === selectedPostId);
 
   // Apply filters before ordering
   const pilastri = [...new Set(feedItems.map(f=>f.pilastro).filter(Boolean))];
@@ -67,7 +68,7 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
   }
 
   function handleListClick(post) {
-    setSelectedPost(prev => prev?.id === post.id ? null : post);
+    setSelectedPostId(prev => prev === post.id ? null : post.id);
   }
 
   const FeedCell = ({post, idx, aspect="1/1"}) => {
@@ -178,7 +179,7 @@ export function FeedPreviewGrid({ project, feedItems, onUpdate, onEdit }) {
               </div>
               <div style={{display:"flex",gap:6}}>
                 <button className="btn-outline sm" onClick={()=>onEdit(selectedPost)}>✏️ Modifica</button>
-                <button className="btn-ghost sm" onClick={()=>setSelectedPost(null)}>✕ Chiudi</button>
+                <button className="btn-ghost sm" onClick={()=>setSelectedPostId(null)}>✕ Chiudi</button>
               </div>
             </div>
             <PlatformPreview

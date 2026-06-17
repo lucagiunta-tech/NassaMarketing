@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { callClaude } from "../../services/aiService";
 import { CaptionScorer } from "./CaptionScorer";
 import { validatePostFormItem } from "./postValidation";
@@ -410,23 +410,42 @@ export function PostValidationSummary({ validation }) {
 // IG-style carousel for the upload form with arrow navigation + remove button
 function CarouselEditorPreview({ urls, onRemove, onReorder }) {
   const [current, setCurrent] = useState(0);
+  const [failedUrls, setFailedUrls] = useState({});
   const total = urls.length;
 
   // Keep current in bounds when items removed
   const safeIdx = Math.min(current, total - 1);
 
+  // Reset errors when URLs change
+  useEffect(() => {
+    setFailedUrls({});
+  }, [urls.join(",")]);
+
+  const handleImageError = (idx) => {
+    setFailedUrls(prev => ({ ...prev, [idx]: true }));
+  };
+
   return (
     <div style={{ width: "100%", overflow: "hidden", background: "#000", position: "relative" }}>
       {/* Main image display */}
-      <div style={{ aspectRatio: "1/1", position: "relative", width: "100%" }}>
-        <img
-          src={urls[safeIdx]}
-          alt={`Slide ${safeIdx + 1}`}
-          style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
-          onError={e => e.target.style.display = "none"}
-        />
+      <div style={{ aspectRatio: "1/1", minHeight: "240px", maxHeight: "400px", position: "relative", width: "100%", background: "#151515", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {failedUrls[safeIdx] ? (
+          <div style={{ color: "var(--ink-3)", fontSize: 11, textAlign: "center", padding: "24px 16px" }}>
+            <div style={{ fontSize: 24, marginBottom: 6 }}>⚠️</div>
+            <div style={{ fontWeight: 600 }}>Impossibile caricare l'immagine</div>
+            <div style={{ fontSize: 9, marginTop: 4, color: "var(--ink-5)", wordBreak: "break-all" }}>{urls[safeIdx] || "URL vuoto"}</div>
+          </div>
+        ) : (
+          <img
+            src={urls[safeIdx]}
+            alt={`Slide ${safeIdx + 1}`}
+            style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }}
+            onError={() => handleImageError(safeIdx)}
+          />
+        )}
         {/* Remove current image */}
         <button
+          type="button"
           onClick={() => { onRemove(safeIdx); setCurrent(Math.max(0, safeIdx - 1)); }}
           style={{ position: "absolute", top: 8, right: 8, width: 26, height: 26, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 13, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4 }}
           title="Rimuovi immagine"
@@ -437,6 +456,7 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
           <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", gap: 6, zIndex: 4 }}>
             {safeIdx > 0 && (
               <button
+                type="button"
                 onClick={() => { onReorder(safeIdx, safeIdx - 1); setCurrent(safeIdx - 1); }}
                 style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 title="Sposta a sinistra"
@@ -444,6 +464,7 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
             )}
             {safeIdx < total - 1 && (
               <button
+                type="button"
                 onClick={() => { onReorder(safeIdx, safeIdx + 1); setCurrent(safeIdx + 1); }}
                 style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(0,0,0,.65)", color: "#fff", border: "none", fontSize: 12, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
                 title="Sposta a destra"
@@ -458,14 +479,14 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
         </div>
         {/* Left arrow */}
         {safeIdx > 0 && (
-          <button onClick={() => setCurrent(c => c - 1)}
+          <button type="button" onClick={() => setCurrent(c => c - 1)}
             style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,.9)", border: "none", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, boxShadow: "0 2px 8px rgba(0,0,0,.2)" }}>
             ‹
           </button>
         )}
         {/* Right arrow */}
         {safeIdx < total - 1 && (
-          <button onClick={() => setCurrent(c => c + 1)}
+          <button type="button" onClick={() => setCurrent(c => c + 1)}
             style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", width: 32, height: 32, borderRadius: "50%", background: "rgba(255,255,255,.9)", border: "none", fontSize: 20, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 4, boxShadow: "0 2px 8px rgba(0,0,0,.2)" }}>
             ›
           </button>
@@ -475,8 +496,12 @@ function CarouselEditorPreview({ urls, onRemove, onReorder }) {
       <div style={{ background: "#111", padding: "8px 12px", display: "flex", gap: 6, alignItems: "center", overflowX: "auto" }}>
         {urls.map((url, i) => (
           <div key={i} onClick={() => setCurrent(i)}
-            style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 4, overflow: "hidden", cursor: "pointer", border: i === safeIdx ? "2px solid #fff" : "2px solid transparent", opacity: i === safeIdx ? 1 : 0.5, transition: "all .15s" }}>
-            <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={e => e.target.style.display = "none"} />
+            style={{ width: 40, height: 40, flexShrink: 0, borderRadius: 4, overflow: "hidden", cursor: "pointer", border: i === safeIdx ? "2px solid #fff" : "2px solid transparent", opacity: i === safeIdx ? 1 : 0.5, transition: "all .15s", position: "relative", background: "#222", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {failedUrls[i] ? (
+              <span style={{ fontSize: 10, color: "var(--ink-4)" }}>⚠️</span>
+            ) : (
+              <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} onError={() => handleImageError(i)} />
+            )}
           </div>
         ))}
       </div>
@@ -522,8 +547,17 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
     data: normalizeDateToISO(item.data)
   });
   const [imgLoading, setImgLoading] = useState(false);
+  const [uploadController, setUploadController] = useState(null);
   const [vidObjUrl,  setVidObjUrl]  = useState(item.videoUrl||"");
   const [aiCaption,  setAiCaption]  = useState(false);
+
+  function cancelUpload() {
+    if (uploadController) {
+      uploadController.abort();
+      setUploadController(null);
+    }
+    setImgLoading(false);
+  }
   const [dragOver,   setDragOver]   = useState(false);
   const [mediaUrlInput, setMediaUrlInput] = useState("");
   const fileInputRef = useRef(null);
@@ -581,8 +615,10 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
   async function handleImageFile(file){
     if(!file||!file.type.startsWith("image/")) return;
     setImgLoading(true);
+    const controller = new AbortController();
+    setUploadController(controller);
     try {
-      const url = await uploadToDropbox(file, clientName, "Images");
+      const url = await uploadToDropbox(file, clientName, "Images", controller.signal);
       if(f.tipo==="carousel"){
         setF(p => {
           const list = [...(p.mediaUrls || []), url];
@@ -606,16 +642,23 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
         }));
       }
     } catch(err) {
-      alert("Errore caricamento Dropbox: " + err.message);
+      if (err.name !== "AbortError") {
+        alert("Errore caricamento Dropbox: " + err.message);
+      }
+    } finally {
+      setUploadController(null);
+      setImgLoading(false);
     }
-    setImgLoading(false);
   }
   async function handleMultipleFiles(files){
     setImgLoading(true);
-    for(const file of files){
-      try {
+    const controller = new AbortController();
+    setUploadController(controller);
+    try {
+      for(const file of files){
+        if (controller.signal.aborted) break;
         if(file.type.startsWith("image/")){
-          const url = await uploadToDropbox(file, clientName, "Images");
+          const url = await uploadToDropbox(file, clientName, "Images", controller.signal);
           setF(p => {
             const list = [...(p.mediaUrls || []), url];
             return {
@@ -628,7 +671,7 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
             };
           });
         } else if(file.type.startsWith("video/")){
-          const url = await uploadToDropbox(file, clientName, "Videos");
+          const url = await uploadToDropbox(file, clientName, "Videos", controller.signal);
           setF(p => {
             const list = [...(p.mediaUrls || []), url];
             return {
@@ -641,17 +684,23 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
             };
           });
         }
-      } catch(err) {
+      }
+    } catch(err) {
+      if (err.name !== "AbortError") {
         alert("Errore caricamento Dropbox: " + err.message);
       }
+    } finally {
+      setUploadController(null);
+      setImgLoading(false);
     }
-    setImgLoading(false);
   }
   async function handleVideoFile(file){
     if(!file||!file.type.startsWith("video/")) return;
     setImgLoading(true);
+    const controller = new AbortController();
+    setUploadController(controller);
     try {
-      const url = await uploadToDropbox(file, clientName, "Videos");
+      const url = await uploadToDropbox(file, clientName, "Videos", controller.signal);
       setVidObjUrl(url);
       setF(p => ({
         ...p,
@@ -661,9 +710,13 @@ export function PostFormModal({ item, members, onSave, onDelete, onClose, pilast
         carouselMedia: [url]
       }));
     } catch(err) {
-      alert("Errore caricamento video Dropbox: " + err.message);
+      if (err.name !== "AbortError") {
+        alert("Errore caricamento video Dropbox: " + err.message);
+      }
+    } finally {
+      setUploadController(null);
+      setImgLoading(false);
     }
-    setImgLoading(false);
   }
   function onInputChange(e,type){
     const files=e.target.files; if(!files?.length) return;
@@ -1019,7 +1072,13 @@ Regole: frasi corte · CTA tecnica · tono professionale B2B.`);
               )
             )}
           </div>
-          {imgLoading&&<div className="gen-row" style={{justifyContent:"center",padding:"8px 0"}}><div className="spin"/>Caricamento immagine…</div>}
+          {imgLoading&&(
+            <div className="gen-row" style={{justifyContent:"center",alignItems:"center",gap:10,padding:"8px 0"}}>
+              <div className="spin"/>
+              <span>Caricamento file...</span>
+              <button type="button" className="btn-outline sm" style={{padding:"2px 8px",minHeight:24,fontSize:10,cursor:"pointer"}} onClick={cancelUpload}>Annulla</button>
+            </div>
+          )}
           {vidObjUrl&&vidObjUrl.startsWith("blob:")&&(
             <div className="pfm-media-hint">⚠️ Video locale (solo anteprima). Inserisci URL Dropbox pubblico per pubblicare su Meta.</div>
           )}

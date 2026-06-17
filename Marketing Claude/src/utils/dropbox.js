@@ -18,9 +18,9 @@ export function fixMediaUrl(url) {
   return url;
 }
 
-export async function getDropboxToken() {
+export async function getDropboxToken(signal = null) {
   try {
-    const r = await fetch(TOKEN_API);
+    const r = await fetch(TOKEN_API, { signal });
     if (!r.ok) return null;
     const d = await r.json();
     return d.token || null;
@@ -29,7 +29,7 @@ export async function getDropboxToken() {
   }
 }
 
-export async function uploadToDropbox(file, clientName = "DefaultClient", subfolder = "Images") {
+export async function uploadToDropbox(file, clientName = "DefaultClient", subfolder = "Images", signal = null) {
   const folder = clientName.replace(/[<>:"\/\\|?*]/g, "").replace(/\s+/g, " ").trim() || "DefaultClient";
   const sub = subfolder.charAt(0).toUpperCase() + subfolder.slice(1).toLowerCase();
   const ext = (file.name.split(".").pop() || "bin").toLowerCase();
@@ -37,7 +37,7 @@ export async function uploadToDropbox(file, clientName = "DefaultClient", subfol
   const path = `/NassaPortal/${folder}/${sub}/${safeName}`;
 
   // 1. Get token
-  const token = await getDropboxToken();
+  const token = await getDropboxToken(signal);
   if (!token) throw new Error("Could not retrieve Dropbox token");
 
   // 2. Upload file
@@ -49,6 +49,7 @@ export async function uploadToDropbox(file, clientName = "DefaultClient", subfol
       "Dropbox-API-Arg": JSON.stringify({ path, mode: "overwrite", autorename: true }),
     },
     body: file,
+    signal,
   });
 
   if (!uploadRes.ok) {
@@ -65,6 +66,7 @@ export async function uploadToDropbox(file, clientName = "DefaultClient", subfol
       "Content-Type": "application/json"
     },
     body: JSON.stringify({ path: uploadData.path_lower }),
+    signal,
   });
   const linkData = await linkRes.json();
   let url = linkData.url || null;
@@ -78,6 +80,7 @@ export async function uploadToDropbox(file, clientName = "DefaultClient", subfol
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ path: uploadData.path_lower, direct_only: true }),
+      signal,
     });
     const listData = await listRes.json();
     url = listData.links?.[0]?.url || null;

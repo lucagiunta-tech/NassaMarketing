@@ -269,3 +269,10 @@ button, [role="button"] {
   transition: none;
 }
 
+/* ── 18. Reels & Stories 3-column Layout overrides ── */
+.fpg-grid-reels,
+.fpg-grid-stories {
+  grid-template-columns: repeat(3, 1fr) !important;
+}
+
+
