@@ -2974,10 +2974,13 @@ function BriefExtractor({onComplete,onBack,initialText}){
     if(!text.trim()) return;
     setLoading(true); setError("");
     try {
-      const raw=await callClaude(buildExtractPrompt(text), 2500);
+      let raw = await callClaude(buildExtractPrompt(text), 2500);
+      if (typeof raw !== "string") {
+        raw = JSON.stringify(raw);
+      }
       // Strip markdown fences
-      const clean=raw.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
-      const match=clean.match(/\{[\s\S]*\}/);
+      const clean = raw.replace(/```json\s*/gi,"").replace(/```\s*/g,"").trim();
+      const match = clean.match(/\{[\s\S]*\}/);
       if(!match) throw new Error("L'AI non ha restituito JSON. Riprova — a volte serve un testo più strutturato.");
       let data;
       try { data=JSON.parse(match[0]); }
